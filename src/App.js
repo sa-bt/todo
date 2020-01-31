@@ -1,26 +1,26 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {Component} from 'react';
+import TodoEntry from "./component/TodoEntry";
+import TodoItems from "./component/TodoItems";
+import TodoFooter from "./component/Footer"
+import TodoStore from "./store/TodoStore";
+import ViewStore from "./store/ViewStore";
 import './App.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+class App extends Component {
+    render() {
+        //const initialState = window.initialState && JSON.parse(window.initialState) || {};
+
+        let todoStore = TodoStore;
+        let viewStore = new ViewStore();
+        return (
+            <div className="todoapp" id="todoapp">
+                <TodoEntry/>
+                <TodoItems todoStore={todoStore} viewStore={viewStore}/>
+                <TodoFooter todoStore={todoStore} viewStore={viewStore} />
+            </div>
+        );
+    }
 }
 
 export default App;
