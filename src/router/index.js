@@ -9,7 +9,7 @@ import YearTab from "@/components/YearTab.vue"
 import WeekTab from "@/components/WeekTab.vue"
 import DayTab from "@/components/DayTab.vue"
 import MonthTab from "@/components/MonthTab.vue"
-
+import SettingTab from "@/components/SettingTab.vue"
 const routes = [
   {
     path: "/login",
@@ -35,6 +35,7 @@ const routes = [
       { path: "week", name: "week", component: WeekTab },
       { path: "month", name: "month", component: MonthTab },
       { path: "day", name: "day", component: DayTab },
+      { path: "settings", name: "settings", component: SettingTab },
     ],
   },
 ]
