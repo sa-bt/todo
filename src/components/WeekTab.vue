@@ -1,39 +1,53 @@
-<script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useGoalsStore } from '@/stores/goals'
 import TaskStatsCard from '@/components/Days/Card.vue'
 import Table from '@/components/Week/Table.vue'
 import { getShamsiWeekRange } from '@/utils/jalali'
+import BaseSelect from '@/components/UI/BaseSelect.vue'
+import BaseTooltip from '@/components/UI/BaseTooltip.vue' // برای UX جدید
+import { Lock } from 'lucide-vue-next' // آیکون جدید Lock
 
 const tasksStore = useTasksStore()
 const goalsStore = useGoalsStore()
 
 const loading = ref(true)
 const showModal = ref(false)
-const selectedGoalId = ref<number | null>(null)
-const selectedDays = ref<string[]>([])
+const selectedGoalId = ref(null)
+const selectedDays = ref([])
+const isSubmitting = ref(false)
+
+const modalRef = ref(null)
+const goalSelectRef = ref(null) // <<< [UX] رفرنس جدید برای BaseSelect
 
 const { start, end } = getShamsiWeekRange()
-const weekDays: { label: string; date: string }[] = []
+const weekDays = []
+const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'] // تمیزکاری
 const startDate = new Date(start)
 for (let i = 0; i < 7; i++) {
   const d = new Date(startDate)
   d.setDate(startDate.getDate() + i)
   weekDays.push({
-    label: ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'][i],
+    label: dayNames[i], // استفاده از dayNames
     date: d.toISOString().slice(0,10)
   })
 }
 
+const goalOptions = computed(() =>
+    goalsStore.goals.map(g => ({ value: g.id, label: g.title }))
+)
+
 async function loadData() {
   loading.value = true
-  await goalsStore.fetchGoals({without_children:true})
+  await goalsStore.fetchGoals({ without_children: true })
   await tasksStore.fetchTasks({ start_date: start, end_date: end })
   loading.value = false
 }
 
-const weekTasks = computed(() => tasksStore.tasks.filter(t => t.day >= start && t.day <= end))
+const weekTasks = computed(() =>
+    tasksStore.tasks.filter(t => t.day >= start && t.day <= end)
+)
 
 const tasksRows = computed(() => {
   const map = new Map()
@@ -52,12 +66,24 @@ const tasksRows = computed(() => {
 })
 
 const completedCount = computed(() => weekTasks.value.filter(t => t.is_done).length)
-const completedPercent = computed(() => weekTasks.value.length ? (completedCount.value / weekTasks.value.length) * 100 : 0)
+const completedPercent = computed(() =>
+    weekTasks.value.length ? (completedCount.value / weekTasks.value.length) * 100 : 0
+)
+
+// <<< [UX] تابع کمکی برای بررسی وجود تسک از قبل
+const isTaskExisting = (day) => {
+  return tasksStore.tasks.some(t => t.goal_id === selectedGoalId.value && t.day === day)
+}
 
 function openModal() {
   selectedGoalId.value = null
   selectedDays.value = []
   showModal.value = true
+  nextTick(() => {
+    // فوکوس اولیه روی Select برای ناوبری سریع
+    // فرض می‌کنیم BaseSelect دارای متد focusInput() است.
+    goalSelectRef.value?.focusInput?.()
+  })
 }
 
 function closeModal() {
@@ -66,22 +92,29 @@ function closeModal() {
   showModal.value = false
 }
 
-function toggleDay(day: string) {
-  if (tasksStore.tasks.some(t => t.goal_id === selectedGoalId && t.day === day)) return
+function toggleDay(day) {
+  // اگر تسک از قبل موجود باشد، هیچ کاری نکنید (منطق حفظ شده است)
+  if (isTaskExisting(day)) return
+
   const index = selectedDays.value.indexOf(day)
   if (index === -1) selectedDays.value.push(day)
   else selectedDays.value.splice(index, 1)
 }
 
 async function addTask() {
-  if (!selectedGoalId.value) return
-  for (const day of selectedDays.value) {
-    await tasksStore.addTask({ goal_id: selectedGoalId.value, day, is_done: 0 })
+  if (!selectedGoalId.value || !selectedDays.value.length || isSubmitting.value) return
+  isSubmitting.value = true
+  try {
+    for (const day of selectedDays.value) {
+      await tasksStore.addTask({ goal_id: selectedGoalId.value, day, is_done: 0 })
+    }
+    closeModal()
+  } finally {
+    isSubmitting.value = false
   }
-  closeModal()
 }
 
-async function toggleTask({ taskRow, day }: { taskRow: any; day: string }) {
+async function toggleTask({ taskRow, day }) {
   const existingTask = taskRow.weekTasks[day]
   if (existingTask) {
     const newStatus = existingTask.is_done ? 0 : 1
@@ -94,69 +127,147 @@ async function toggleTask({ taskRow, day }: { taskRow: any; day: string }) {
   }
 }
 
-onMounted(() => loadData())
+function onKeydown(e) {
+  if (e.key === 'Escape' && showModal.value) {
+    e.stopPropagation()
+    closeModal()
+  }
+}
+
+onMounted(() => {
+  loadData()
+  window.addEventListener('keydown', onKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
-  <div class="p-4 min-h-screen">
+  <div class="p-4 min-h-screen surface text-[var(--color-text)]">
 
-    <!-- کارت‌ها -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
       <TaskStatsCard title="کل تسک‌ها" :value="weekTasks.length" icon="ListChecks" color="blue" />
       <TaskStatsCard title="انجام شده" :value="completedCount" icon="CheckCircle" color="green" :progress="completedPercent" />
       <TaskStatsCard title="باقی مانده" :value="weekTasks.length - completedCount" icon="XCircle" color="orange" :progress="100 - completedPercent" />
     </div>
 
-    <!-- دکمه اضافه کردن تسک هفته -->
     <div class="mt-6 text-right">
-      <button @click="openModal" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl shadow hover:scale-105 transform transition">
+      <button
+          @click="openModal"
+          class="btn btn-primary tap-target"
+      >
         ➕ اضافه کردن تسک هفته
       </button>
     </div>
 
-    <!-- جدول تسک‌ها -->
     <div v-if="loading" class="text-center py-6 mt-10">
-      <div class="w-12 h-12 border-4 border-blue-400 border-dashed rounded-full animate-spin mx-auto"></div>
+      <div class="w-12 h-12 border-4 border-[var(--color-accent)] border-dashed rounded-full animate-spin mx-auto"></div>
+      <p class="mt-3 text-text-secondary">در حال بارگذاری تسک‌های این هفته…</p>
     </div>
     <div v-else class="mt-6">
       <Table v-if="tasksRows.length" :weekDays="weekDays" :tasksRows="tasksRows" @toggle-task="toggleTask" />
-      <div v-else class="text-gray-500 text-center py-10">هیچ تسکی برای این هفته ثبت نشده است</div>
+      <div v-else class="text-center py-10 text-text-secondary">
+        هیچ تسکی برای این هفته ثبت نشده است
+      </div>
     </div>
 
-    <!-- مودال هفته -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-        <h3 class="text-lg font-bold mb-4 text-right">انتخاب هدف برای هفته</h3>
-        <select v-model="selectedGoalId" class="w-full p-3 rounded-lg border text-right mb-4">
-          <option :value="null">-- یک هدف انتخاب کنید --</option>
-          <option v-for="g in goalsStore.goals" :key="g.id" :value="g.id">{{ g.title }}</option>
-        </select>
+    <div
+        v-if="showModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        aria-labelledby="week-modal-title"
+        aria-modal="true"
+        role="dialog"
+    >
+      <div class="absolute inset-0 bg-black/50" @click="closeModal"></div>
 
-        <div v-if="selectedGoalId" class="mb-4">
-          <div class="flex gap-2 overflow-x-auto py-2">
-            <div v-for="day in weekDays" :key="day.date" @click="toggleDay(day.date)"
-              class="flex-shrink-0 w-16 sm:w-14 p-3 rounded-lg cursor-pointer transition-transform duration-200 transform flex flex-col items-center text-center"
-              :class="[
-                tasksStore.tasks.some(t => t.goal_id === selectedGoalId && t.day === day.date)
-                  ? 'bg-gray-200 text-gray-400 line-through cursor-not-allowed'
+      <div
+          ref="modalRef"
+          class="relative w-full max-w-md rounded-2xl p-6 shadow-xl border border-token surface-soft
+               outline-none"
+          tabindex="-1"
+      >
+        <button @click="closeModal" class="absolute top-4 left-4 p-1 rounded hover:surface-mute text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
+        </button>
+
+        <h3 id="week-modal-title" class="text-lg font-bold mb-4 text-right text-[var(--color-heading)]">
+          انتخاب هدف برای هفته
+        </h3>
+
+        <BaseSelect
+            v-model="selectedGoalId"
+            :options="goalOptions"
+            placeholder="-- یک هدف انتخاب کنید --"
+            :disabled="loading || !goalsStore.goals.length"
+            align="auto"
+            :maxHeight="280"
+            ref="goalSelectRef" @open=""
+            @close=""
+            @change=""
+        />
+
+        <div v-if="selectedGoalId" class="mb-4 mt-3">
+          <div class="flex gap-2 overflow-x-auto py-2 scroll-soft">
+            <div
+                v-for="day in weekDays"
+                :key="day.date"
+                @click="toggleDay(day.date)"
+                @keydown.enter.prevent="toggleDay(day.date)"
+                @keydown.space.prevent="toggleDay(day.date)"
+                class="flex-shrink-0 w-16 sm:w-14 p-3 rounded-lg cursor-pointer transition-transform duration-200 transform flex flex-col items-center text-center outline-none border border-token relative"
+                :tabindex="isTaskExisting(day.date) ? -1 : 0" :aria-pressed="selectedDays.includes(day.date)"
+                :class="[
+                isTaskExisting(day.date)
+                  ? 'surface-mute text-text-secondary opacity-70 cursor-not-allowed' // [UX] بهبود استایل غیرفعال
                   : selectedDays.includes(day.date)
-                    ? 'bg-indigo-500 text-white shadow-lg scale-105'
-                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                    ? 'bg-[var(--color-primary)] text-white shadow-lg scale-105'
+                    : 'surface-soft text-[var(--color-primary)] hover:surface-mute'
               ]"
             >
-              <span v-if="tasksStore.tasks.some(t => t.goal_id === selectedGoalId && t.day === day.date)" class="mb-1">✅</span>
+              <BaseTooltip
+                  v-if="isTaskExisting(day.date)"
+                  text="تسک قبلاً برای این هدف و روز ثبت شده است."
+                  placement="top"
+                  class="absolute top-2 left-2"
+              >
+                <Lock class="w-3 h-3 text-[var(--color-text-secondary)]" aria-hidden="true" />
+              </BaseTooltip>
+
               <span class="text-sm font-medium">{{ day.label }}</span>
-              <span class="text-xs text-gray-500 sm:hidden">{{ day.date.slice(5) }}</span>
+              <span class="text-xs sm:hidden text-[var(--color-text-secondary)]">{{ day.date.slice(5) }}</span>
             </div>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 mt-4">
-          <button @click="closeModal" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">انصراف</button>
-          <button @click="addTask" class="px-4 py-2 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600" :disabled="!selectedGoalId || !selectedDays.length">اضافه کردن</button>
+          <button @click="closeModal" class="btn btn-ghost border border-token">
+            انصراف
+          </button>
+          <button
+              @click="addTask"
+              :disabled="!selectedGoalId || !selectedDays.length || isSubmitting"
+              class="btn btn-primary tap-target is-disabled" >
+            اضافه کردن
+          </button>
         </div>
       </div>
     </div>
 
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.18s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* پالس badge ملایم‌تر و کمتر چشمک‌زن */
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.25); }
+  50% { transform: scale(1.08); opacity: 0.98; box-shadow: 0 0 6px 2px rgba(239,68,68,0.2); }
+}
+.badge-red-pulse-glow{
+  background:#ef4444;
+  animation:pulse-badge 1.4s ease-in-out infinite;
+}
+</style>

@@ -1,17 +1,16 @@
 <script setup>
-import { ref, watch } from "vue"
-import Datepicker from "vue3-persian-datetime-picker"
+import { ref, watch, computed, defineProps, defineEmits, nextTick, onBeforeUnmount } from 'vue'
+import Datepicker from 'vue3-persian-datetime-picker'
+import BaseSelect from '@/components/UI/BaseSelect.vue'
 import { useNotificationStore } from '@/stores/toast'
 
-const props = defineProps({
-  show: Boolean,
-  goal: Object
-})
-const emit = defineEmits(["close", "taskCreated"])
-
+const props = defineProps({ show: Boolean, goal: Object })
+const emit = defineEmits(['close','taskCreated'])
 const notification = useNotificationStore()
 
-// state
+const modalEl = ref(null)
+const datepickerRef = ref(null) // ✅ رفرنس جدید به Datepicker
+
 const selectedDate = ref(null)
 const mode = ref('preset')
 const duration = ref(1)
@@ -19,157 +18,146 @@ const amount = ref(1)
 const loading = ref(false)
 
 const durationOptions = [
-  { label: "امروز", value: 1, icon: '☀️' },
-  { label: "هفته", value: 7, icon: '🗓️' },
-  { label: "ماه", value: 30, icon: '📆' },
-  { label: "سال", value: 365, icon: '📅' },
+  { label: 'امروز', value: 1 }, { label: 'هفته', value: 7 },
+  { label: 'ماه', value: 30 },  { label: 'سال', value: 365 },
 ]
 
-// ریست فرم وقتی مدال بسته شد
-watch(() => props.show, (val) => {
-  if (!val) {
-    selectedDate.value = null
-    mode.value = 'preset'
-    duration.value = 1
-    amount.value = 1
+// ✅ Computed برای فعال/غیرفعال کردن دکمه ثبت
+const isSubmitDisabled = computed(() =>
+    !selectedDate.value || loading.value || (mode.value === 'custom' && amount.value < 1)
+);
+
+watch(() => props.show, async (v) => {
+  document.documentElement.style.overflow = v ? 'hidden' : ''
+  if (!v) {
+    selectedDate.value = null;
+    mode.value = 'preset';
+    duration.value = 1;
+    amount.value = 1;
+    window.removeEventListener('keydown', onKey);
+  } else {
+    await nextTick();
+    // ✅ فوکوس روی Datepicker
+    datepickerRef.value?.$el.querySelector('input')?.focus();
+    window.addEventListener('keydown', onKey)
   }
 })
+onBeforeUnmount(()=> window.removeEventListener('keydown', onKey))
 
-// shortcut دکمه‌ها
+function onKey(e){
+  if (e.key === 'Escape') emit('close')
+  if (e.key === 'Tab' && modalEl.value){
+    const focusables = modalEl.value.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), [role="listbox"], [tabindex]:not([tabindex="-1"]):not([disabled])')
+    const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'))
+    if (!list.length) return
+    const first = list[0], last = list[list.length - 1], active = document.activeElement
+    if (e.shiftKey && active === first){ e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && active === last){ e.preventDefault(); first.focus() }
+  }
+}
+
 function setShortcut(value) {
-  mode.value = 'preset'
+  mode.value = 'preset';
   duration.value = value
 }
 
 async function submitTask() {
-  if (!selectedDate.value) {
-    notification.setNotification('تاریخ را انتخاب کنید!', 'error')
-    return
+  if (isSubmitDisabled.value) {
+    if (!selectedDate.value) notification.setNotification('تاریخ شروع تسک را انتخاب کنید.', 'error');
+    if (mode.value === 'custom' && amount.value < 1) notification.setNotification('مدت تسک باید بزرگتر از ۰ باشد.', 'error');
+    return;
   }
 
   const taskDuration = mode.value === 'preset' ? duration.value : amount.value
-  if (taskDuration < 1) {
-    notification.setNotification('مدت تسک باید بزرگتر از ۰ باشد!', 'error')
-    return
-  }
 
   loading.value = true
   try {
-    await new Promise(r => setTimeout(r, 300)) // شبیه‌سازی تاخیر
-    emit("taskCreated", {
-      goal_id: props.goal.id,
-      start_date: selectedDate.value,
-      duration: taskDuration,
-    })
-    emit("close")
-    notification.setNotification('تسک با موفقیت اضافه شد ✅', 'success')
+    emit('taskCreated', { goal_id: props.goal.id, start_date: selectedDate.value, duration: taskDuration })
+    // ✅ پیام موفقیت به Goals.vue منتقل شد
+  } catch(error) {
+    console.error('Failed to create task:', error);
+    notification.setNotification('خطا در ثبت تسک!', 'error');
   } finally {
-    loading.value = false
+    loading.value = false;
+    emit('close'); // بستن مودال در هر صورت
   }
 }
 </script>
 
 <template>
-  <transition name="fade-scale">
-    <div
-      v-if="props.show"
-      class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-      @click.self="emit('close')"
-    >
-      <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-lg transform transition-transform">
-        <h2 class="text-lg font-bold mb-4 text-right border-b pb-2">افزودن تسک به: {{ props.goal.title }}</h2>
+  <Teleport to="body">
+    <transition name="fade-modal">
+      <div v-if="props.show" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4"
+           role="dialog" aria-modal="true" aria-labelledby="task-modal-title" @click.self="emit('close')">
+        <div ref="modalEl" class="card-bg rounded-2xl p-6 w-full max-w-md shadow-xl border border-token text-right">
+          <h2 id="task-modal-title" class="text-lg font-bold mb-4 border-b border-token pb-2 text-[var(--color-heading)]">
+            افزودن تسک به: {{ props.goal?.title }}
+          </h2>
 
-        <!-- انتخاب تاریخ -->
-        <div class="mb-4 text-right">
-          <label class="block mb-1 font-medium">تاریخ شروع</label>
-          <Datepicker
-            v-model="selectedDate"
-            format="jYYYY/jMM/jDD"
-            type="date"
-            locale="fa"
-            :input-class="'w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-400'"
-          />
-        </div>
-
-        <!-- انتخاب حالت مدت -->
-        <div class="mb-4 text-right">
-          <label class="block mb-1 font-medium ">مدت تسک</label>
-          <div class="flex gap-4 mb-4">
-            <label class="flex items-center gap-2">
-              <input type="radio" value="preset" v-model="mode" /> انتخاب از لیست
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="radio" value="custom" v-model="mode" /> وارد کردن عدد
-            </label>
+          <div class="mb-4">
+            <label class="block mb-1 font-medium text-[var(--color-text)]" for="task-start">تاریخ شروع</label>
+            <Datepicker
+                id="task-start"
+                ref="datepickerRef"
+                v-model="selectedDate"
+                format="jYYYY/jMM/jDD"
+                type="date"
+                locale="fa"
+                :input-class="'p-3 rounded-lg border border-token card-bg ring-focus'"
+            />
           </div>
 
-          <!-- shortcut سریع با آیکن -->
-          <div v-if="mode === 'preset'" class="flex flex-wrap gap-2 m-2 justify-end">
-            <button
-              v-for="opt in durationOptions"
-              :key="opt.value"
-              @click="setShortcut(opt.value)"
-              :class="[
-                'px-4 py-2 rounded-lg transition flex items-center gap-1 text-sm sm:text-base',
-                duration===opt.value && mode==='preset'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
-                  : 'bg-gray-200 hover:bg-gray-300'
-              ]"
-              :title="`انتخاب ${opt.label} = ${opt.value} روز`"
-            >
-              <span>{{ opt.icon }}</span>
-              {{ opt.label }}
+          <div class="mb-4">
+            <label class="block mb-2 font-medium text-[var(--color-text)]">مدت تسک</label>
+            <div class="flex gap-4 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" value="preset" v-model="mode" /> انتخاب از لیست
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" value="custom" v-model="mode" /> وارد کردن عدد
+              </label>
+            </div>
+
+            <div v-if="mode === 'preset'" class="flex flex-wrap gap-2 justify-start mb-3">
+              <button v-for="opt in durationOptions" :key="opt.value" @click="setShortcut(opt.value)"
+                      class="tap-target px-3 py-2 rounded-lg transition flex items-center gap-1 text-sm"
+                      :class="{
+                        'bg-[var(--color-primary)] text-white shadow-md': duration === opt.value,
+                        'card-bg border border-token hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)]': duration !== opt.value
+                      }">
+                {{ opt.label }}
+              </button>
+            </div>
+
+            <BaseSelect v-if="mode === 'preset'" v-model="duration" :options="durationOptions" placeholder="انتخاب بازه" />
+
+            <input v-if="mode === 'custom'" v-model.number="amount" type="number" min="1" placeholder="تعداد روزها"
+                   class="w-full p-3 rounded-lg border border-token card-bg ring-focus text-[var(--color-text)]" />
+          </div>
+
+          <div class="flex justify-end gap-3 mt-4">
+            <button @click="$emit('close')" class="tap-target px-4 py-2 rounded-lg bg-[var(--color-background-soft)] hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)] transition">انصراف</button>
+            <button @click="submitTask" :disabled="isSubmitDisabled"
+                    class="tap-target px-4 py-2 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :aria-busy="loading ? 'true' : 'false'">
+              <span v-if="loading" class="animate-spin border-2 border-white border-t-transparent w-4 h-4 rounded-full" aria-hidden="true"></span>
+              ثبت
             </button>
           </div>
-
-          <!-- حالت select -->
-          <select v-if="mode === 'preset'" v-model="duration" class="w-full p-2 rounded-lg border" title="انتخاب بازه از لیست">
-            <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-
-          <!-- حالت عدد دلخواه -->
-          <input
-            v-if="mode === 'custom'"
-            v-model.number="amount"
-            type="number"
-            min="1"
-            placeholder="تعداد روزها"
-            class="w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-400"
-            title="عدد دلخواه = می‌توانید هر تعداد روز وارد کنید"
-          />
         </div>
-
-        <div class="flex justify-end gap-3 mt-4">
-          <button @click="$emit('close')"
-                  class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition">
-            انصراف
-          </button>
-          <button @click="submitTask"
-                  :disabled="loading"
-                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2">
-            <span v-if="loading" class="animate-spin border-2 border-white border-t-transparent w-4 h-4 rounded-full"></span>
-            ثبت
-          </button>
-        </div>
-
       </div>
-    </div>
-  </transition>
+    </transition>
+  </Teleport>
 </template>
 
 <style scoped>
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: all 0.25s ease;
-}
-.fade-scale-enter-from,
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
-}
-.fade-scale-enter-to,
-.fade-scale-leave-from {
-  opacity: 1;
-  transform: scale(1);
+.fade-modal-enter-active, .fade-modal-leave-active { transition: opacity .2s ease; }
+.fade-modal-enter-from, .fade-modal-leave-to { opacity: 0; }
+.fade-modal-enter-to, .fade-modal-leave-from { opacity: 1; }
+/* کلاس‌های رنگی برای سازگاری بهتر با طرح دارک/لایت */
+.card-bg { background-color: var(--color-background); }
+.ring-focus:focus {
+  outline: 3px solid color-mix(in oklab, var(--color-primary) 40%, white);
+  outline-offset: 2px;
 }
 </style>

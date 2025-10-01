@@ -1,0 +1,23 @@
+/* Shabnam FD (Farsi Digits) Font Setup */
+
+@font-face {
+  font-family: 'Shabnam FD';
+  src: url('./fonts/Shabnam/Shabnam-FD.woff2') format('woff2'),
+       url('./fonts/Shabnam/Shabnam-FD.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shabnam FD';
+  src: url('./fonts/Shabnam/Shabnam-Bold-FD.woff2') format('woff2'),
+       url('./fonts/Shabnam/Shabnam-Bold-FD.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html, body {
+  font-family: 'Shabnam FD', sans-serif;
+}

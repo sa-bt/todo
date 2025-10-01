@@ -18,39 +18,54 @@ const title = computed(() => {
 <template>
   <Transition name="fade-scale" appear>
     <li
-      @click="emit('toggle', task)"
-      class="flex items-center justify-between p-4 rounded-2xl border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer bg-white"
+        @click="emit('toggle', task)"
+        class="flex items-center justify-between p-4 rounded-xl shadow-md border-token surface transition-all duration-300 cursor-pointer"
+        :class="{
+        'hover:shadow-lg hover:-translate-y-0.5': !task.is_done, // افکت هاور برای کارهای ناتمام
+        'opacity-70': task.is_done // کمرنگ‌تر شدن برای کارهای انجام شده
+      }"
     >
-      <!-- بخش اطلاعات -->
-      <div class="flex flex-col flex-1 gap-1 overflow-hidden mr-4">
+      <div
+          class="w-5 h-5 ml-4 flex items-center justify-center rounded-full transition-colors duration-300 flex-shrink-0"
+          :style="{
+          // استفاده از bg-primary و border-primary برای هماهنگی با تم
+          backgroundColor: task.is_done ? 'var(--color-primary)' : 'var(--color-background-mute)',
+          border: `2px solid ${task.is_done ? 'var(--color-primary)' : 'var(--color-border-hover)'}`,
+        }"
+      >
+        <Check
+            v-if="task.is_done"
+            class="w-3.5 h-3.5 text-white transition-opacity duration-300"
+        />
+      </div>
+
+      <div class="flex flex-col flex-1 gap-1 overflow-hidden">
+
         <span
-          class="font-semibold text-sm truncate"
-          :class="task.is_done ? 'line-through text-gray-500' : 'text-gray-800'"
+            class="font-semibold text-base truncate transition-colors duration-300"
+            :class="task.is_done ? 'text-text-secondary line-through' : 'text-heading'"
+            :style="{ color: task.is_done ? 'var(--color-text-secondary)' : 'var(--color-heading)' }"
         >
           {{ title }}
         </span>
+
         <span
-          class="text-xs px-2 py-1 rounded-full self-start font-medium truncate"
-          :class="task.is_done ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
+            class="badge surface-soft self-start font-medium transition-colors duration-300"
+            :style="{ color: 'var(--color-text-secondary)' }"
         >
-          {{ props.task.day }}
+          📅 {{ props.task.day }}
         </span>
       </div>
 
-      <!-- دکمه وضعیت -->
-      <button
-        class="w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all duration-300 ease-out"
-        :class="task.is_done
-          ? 'bg-green-500 border-green-600 text-white'
-          : 'bg-white border-gray-300 hover:border-gray-500 text-gray-400'"
+      <div
+          class="text-text-secondary hover:text-heading p-1 mr-1 flex-shrink-0 transition-colors duration-200"
       >
-        <Check v-if="task.is_done" class="w-5 h-5 transition-transform duration-300 transform scale-100" />
-      </button>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
+      </div>
+
     </li>
   </Transition>
-</template>
-
-<style scoped>
+</template><style scoped>
 .fade-scale-enter-from {
   opacity: 0;
   transform: scale(0.95);
