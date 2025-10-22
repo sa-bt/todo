@@ -5,59 +5,43 @@ import { useTasksStore } from '@/stores/tasks'
 import { useGoalsStore } from '@/stores/goals'
 import TaskStatsCard from '@/components/Days/Card.vue'
 import TaskItem from '@/components/Days/TaskItem.vue'
+import AddTaskModal from '@/components/Days/AddTaskModal.vue'
 import { getTodayShamsi } from '@/utils/jalali'
-import BaseSelect from '@/components/UI/BaseSelect.vue'
 
 const tasksStore = useTasksStore()
 const goalsStore = useGoalsStore()
 
-// لودینگ
 const loading = ref(true)
-
-// مدال اضافه تسک
 const showModal = ref(false)
-const selectedGoalId = ref(null)
-
-// تاریخ امروز
 const today = ref(getTodayShamsi())
 
 // تسک‌های امروز
 const todayTasks = computed(() => tasksStore.tasks)
 
-// شمارش انجام شده
-const completedCount = computed(() => todayTasks.value.filter((t) => t.is_done).length)
+// آمار تسک‌ها
+const completedCount = computed(() => todayTasks.value.filter(t => t.is_done).length)
 const completedPercent = computed(() =>
     todayTasks.value.length ? (completedCount.value / todayTasks.value.length) * 100 : 0
 )
 
 // باز کردن مدال
 function openModal() {
-  selectedGoalId.value = null
   showModal.value = true
 }
 
-const availableGoals = computed(() => {
-  const todayTaskGoalIds = todayTasks.value.map((t) => t.goal_id)
-  return goalsStore.goals.filter((g) => !todayTaskGoalIds.includes(g.id))
-})
-
 // اضافه کردن تسک جدید
-async function addTask() {
-  if (!selectedGoalId.value) return
-  const payload = {
-    goal_id: selectedGoalId.value,
-    day: today.value,
-    is_done: 0,
-  }
+async function addTask(goalId) {
+  if (!goalId) return
+  const payload = { goal_id: goalId, day: today.value, is_done: 0 }
   await tasksStore.addTask(payload)
   showModal.value = false
 }
 
-// toggle انجام شد
+// toggle انجام شدن
 async function toggleDone(task) {
   const updated = { ...task, is_done: task.is_done ? 0 : 1 }
   await tasksStore.updateTask(task.id, updated)
-  const index = tasksStore.tasks.findIndex((t) => t.id === task.id)
+  const index = tasksStore.tasks.findIndex(t => t.id === task.id)
   if (index !== -1) tasksStore.tasks[index] = updated
 }
 
@@ -68,114 +52,73 @@ onMounted(async () => {
   loading.value = false
 })
 
+// انیمیشن درصد
 const displayedPercent = ref(0)
-watch(
-    () => completedPercent.value,
-    (newVal) => {
-      const step = () => {
-        if (Math.abs(displayedPercent.value - newVal) < 0.1) {
-          displayedPercent.value = newVal
-          return
-        }
-        displayedPercent.value += (newVal - displayedPercent.value) * 0.1
-        requestAnimationFrame(step)
-      }
-      requestAnimationFrame(step)
+watch(() => completedPercent.value, (newVal) => {
+  const step = () => {
+    if (Math.abs(displayedPercent.value - newVal) < 0.1) {
+      displayedPercent.value = newVal
+      return
     }
-)
+    displayedPercent.value += (newVal - displayedPercent.value) * 0.1
+    requestAnimationFrame(step)
+  }
+  requestAnimationFrame(step)
+})
 </script>
 
 <template>
   <div class="p-4 min-h-screen">
     <h2 class="text-2xl font-bold mb-4 text-right">تسک‌های امروز</h2>
 
-    <!-- کارت‌ها -->
+    <!-- کارت‌های آمار -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <TaskStatsCard
-          title="کل تسک‌ها"
-          :value="todayTasks.length"
-          icon="ListChecks"
-          color="blue"
-      />
-
-      <TaskStatsCard
-          title="انجام شده"
-          :value="completedCount"
-          icon="CheckCircle"
-          color="green"
-          :progress="completedPercent"
-      />
-
-      <TaskStatsCard
-          title="باقی مانده"
-          :value="todayTasks.length - completedCount"
-          icon="XCircle"
-          color="orange"
-          :progress="100 - completedPercent"
-      />
+      <TaskStatsCard title="کل تسک‌ها" :value="todayTasks.length" icon="ListChecks" color="blue" />
+      <TaskStatsCard title="انجام شده" :value="completedCount" icon="CheckCircle" color="green" :progress="completedPercent" />
+      <TaskStatsCard title="باقی مانده" :value="todayTasks.length - completedCount" icon="XCircle" color="orange" :progress="100 - completedPercent" />
     </div>
 
-    <!-- دکمه اضافه کردن تسک -->
+    <!-- دکمه اضافه کردن -->
     <div class="mt-6 text-right">
       <button
           @click="openModal"
-          class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl shadow hover:scale-105 transform transition"
+          class="tap-target inline-flex items-center justify-center gap-2 px-5 py-3
+         rounded-2xl font-semibold text-white text-sm
+         bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]
+         shadow-lg shadow-[var(--color-primary)]/30
+         transition-all duration-200 ease-out
+         hover:-translate-y-0.5 active:scale-[0.97]"
       >
-        ➕ اضافه کردن تسک
+        <span class="text-lg leading-none">➕</span>
+        <span>افزودن تسک</span>
       </button>
+
+    </div>
+
+    <!-- Loader -->
+    <div v-if="loading" class="text-center py-6 mt-10">
+      <div class="w-12 h-12 border-4 border-blue-400 border-dashed rounded-full animate-spin mx-auto"></div>
     </div>
 
     <!-- لیست تسک‌ها -->
-    <div v-if="loading" class="text-center py-6 mt-10">
-      <div
-          class="w-12 h-12 border-4 border-blue-400 border-dashed rounded-full animate-spin mx-auto"
-      ></div>
-    </div>
     <div v-else class="mt-6">
-      <ul v-if="todayTasks.length" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 space-y-3">
-        <TaskItem
-            v-for="task in todayTasks"
-            :key="task.id"
-            :task="task"
-            @toggle="toggleDone"
-        />
+      <ul v-if="todayTasks.length" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 content-start">
+        <TaskItem v-for="task in todayTasks" :key="task.id" :task="task" @toggle="toggleDone" />
       </ul>
 
-      <div v-else class="text-gray-500 text-center py-10">هیچ تسکی برای امروز ثبت نشده است</div>
-    </div>
-
-    <!-- مدال انتخاب هدف -->
-    <div
-        v-if="showModal"
-        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-    >
-      <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-        <h3 class="text-lg font-bold mb-4 text-right">انتخاب هدف برای امروز</h3>
-
-        <!-- BaseSelect بجای select خام -->
-        <BaseSelect
-            v-model="selectedGoalId"
-            :options="availableGoals.map(g => ({ value: g.id, label: g.title }))"
-            placeholder="-- یک هدف انتخاب کنید --"
-            class="mb-4"
-        />
-
-        <div class="flex justify-end gap-2">
-          <button
-              @click="showModal = false"
-              class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400"
-          >
-            انصراف
-          </button>
-          <button
-              @click="addTask"
-              class="px-4 py-2 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600"
-          >
-            اضافه کردن
-          </button>
-        </div>
+      <div v-else class="text-gray-500 text-center py-10">
+        هیچ تسکی برای امروز ثبت نشده است
       </div>
     </div>
+
+    <!-- کامپوننت مدال -->
+    <AddTaskModal
+        v-if="showModal"
+        :goals="goalsStore.goals"
+        :tasks="todayTasks"
+        @close="showModal = false"
+        @add="addTask"
+    />
   </div>
 </template>
 

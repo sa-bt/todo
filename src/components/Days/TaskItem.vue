@@ -19,62 +19,70 @@ const title = computed(() => {
   <Transition name="fade-scale" appear>
     <li
         @click="emit('toggle', task)"
-        class="flex items-center justify-between p-4 rounded-xl shadow-md border-token surface transition-all duration-300 cursor-pointer"
+        class="goal-item h-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-token
+             surface cursor-pointer transition-all duration-300 select-none"
         :class="{
-        'hover:shadow-lg hover:-translate-y-0.5': !task.is_done, // افکت هاور برای کارهای ناتمام
-        'opacity-70': task.is_done // کمرنگ‌تر شدن برای کارهای انجام شده
+        'hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/50': !task.is_done,
+        'opacity-70 scale-[0.99]': task.is_done
       }"
     >
+      <!-- دایره وضعیت -->
       <div
-          class="w-5 h-5 ml-4 flex items-center justify-center rounded-full transition-colors duration-300 flex-shrink-0"
+          class="w-6 h-6 flex items-center justify-center rounded-full transition-all duration-300 flex-shrink-0"
           :style="{
-          // استفاده از bg-primary و border-primary برای هماهنگی با تم
-          backgroundColor: task.is_done ? 'var(--color-primary)' : 'var(--color-background-mute)',
+          backgroundColor: task.is_done ? 'var(--color-primary)' : 'transparent',
           border: `2px solid ${task.is_done ? 'var(--color-primary)' : 'var(--color-border-hover)'}`,
+          boxShadow: task.is_done ? '0 0 0 3px color-mix(in oklab,var(--color-primary) 25%,white)' : 'none'
         }"
       >
-        <Check
-            v-if="task.is_done"
-            class="w-3.5 h-3.5 text-white transition-opacity duration-300"
-        />
+        <Check v-if="task.is_done" class="w-3.5 h-3.5 text-white transition-opacity duration-300" />
       </div>
 
-      <div class="flex flex-col flex-1 gap-1 overflow-hidden">
-
+      <!-- عنوان و تاریخ -->
+      <div class="flex flex-col flex-1 overflow-hidden text-right">
         <span
-            class="font-semibold text-base truncate transition-colors duration-300"
-            :class="task.is_done ? 'text-text-secondary line-through' : 'text-heading'"
+            class="font-semibold text-base truncate transition-all duration-300"
+            :class="task.is_done ? 'line-through' : ''"
             :style="{ color: task.is_done ? 'var(--color-text-secondary)' : 'var(--color-heading)' }"
         >
           {{ title }}
         </span>
 
         <span
-            class="badge surface-soft self-start font-medium transition-colors duration-300"
-            :style="{ color: 'var(--color-text-secondary)' }"
+            class="text-xs px-2 py-0.5 rounded-md font-medium mt-1 inline-block"
+            :style="{
+            background: 'color-mix(in oklab,var(--color-background-soft) 90%,white)',
+            color: 'var(--color-text-secondary)',
+            border: '1px solid var(--color-border)'
+          }"
         >
           📅 {{ props.task.day }}
         </span>
       </div>
 
-      <div
-          class="text-text-secondary hover:text-heading p-1 mr-1 flex-shrink-0 transition-colors duration-200"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
+      <!-- فلش -->
+      <div class="text-text-secondary hover:text-heading p-1 flex-shrink-0 transition-colors duration-200">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="lucide lucide-chevron-left">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
       </div>
-
     </li>
   </Transition>
-</template><style scoped>
+</template>
+
+<style scoped>
+.fade-scale-enter-active {
+  transition: all 0.25s ease-out;
+}
 .fade-scale-enter-from {
   opacity: 0;
-  transform: scale(0.95);
+  transform: scale(0.96) translateY(6px);
 }
 .fade-scale-enter-to {
   opacity: 1;
-  transform: scale(1);
-}
-.fade-scale-enter-active {
-  transition: all 0.2s ease-out;
+  transform: scale(1) translateY(0);
 }
 </style>

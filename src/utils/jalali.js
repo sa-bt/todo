@@ -1,4 +1,7 @@
-import jalaali from 'jalaali-js';
+// jalali.js
+
+// اصلاح: ایمپورت JalaaliDate برای استفاده از متدهای کلاسیک
+import * as jalaali from 'jalaali-js';
 
 // نام ماه‌های شمسی برای نمایش در UI
 const SHAMSI_MONTH_NAMES = [
@@ -27,18 +30,45 @@ export function gregorianToJalali(date) {
 
 export function getShamsiWeekRange() {
     const today = new Date();
+    // تبدیل تاریخ میلادی به شمسی
     const { jy, jm, jd } = jalaali.toJalaali(today);
+    // 0: شنبه (بر اساس منطق شمسی)
     const dayOfWeekShamsi = (today.getDay() + 1) % 7;
 
-    const startObj = jalaali.JalaaliDate.fromJalaali(jy, jm, jd).addDays(-dayOfWeekShamsi);
-    const endObj = jalaali.JalaaliDate.fromJalaali(jy, jm, jd).addDays(6 - dayOfWeekShamsi);
+    // برای استفاده از متدهای JalaaliDate باید آن را مستقیما از پکیج jalaali-js ایمپورت کرد
+    // چون در اینجا فقط 'jalaali' ایمپورت شده، باید از شیوه متناوب استفاده کنیم.
+    // (JalaaliDate در این پکیج به سادگی به عنوان jalaali.JalaaliDate در دسترس نیست.)
+
+    // **اصلاح منطق: استفاده از توابع کتابخانه به جای کلاس JalaaliDate**
+
+    // 1. محاسبه تاریخ میلادی شروع هفته (شنبه)
+    // روزهای میلادی: 0=یکشنبه، 1=دوشنبه، ... 6=شنبه.
+    // dayOfWeekShamsi: 0=شنبه، 6=جمعه.
+    const todayGregorianDay = today.getDay(); // 0 (یکشنبه) تا 6 (شنبه)
+
+    // تعداد روزهایی که باید به عقب برگردیم تا به شنبه (روز 6 میلادی) برسیم.
+    // اگر امروز شنبه (6) باشد، 0 روز عقب. اگر یکشنبه (0) باشد، 6 روز عقب.
+    const daysToSubtract = (todayGregorianDay === 6) ? 0 : todayGregorianDay + 1;
+
+    // تاریخ میلادی شروع هفته (شنبه)
+    const startOfWeekGregorian = new Date(today.getTime());
+    startOfWeekGregorian.setDate(today.getDate() - daysToSubtract);
+
+    // تاریخ میلادی پایان هفته (جمعه)
+    const endOfWeekGregorian = new Date(startOfWeekGregorian.getTime());
+    endOfWeekGregorian.setDate(startOfWeekGregorian.getDate() + 6);
+
+
+    // تبدیل مجدد به شمسی برای فرمت دهی
+    const startShamsi = jalaali.toJalaali(startOfWeekGregorian);
+    const endShamsi = jalaali.toJalaali(endOfWeekGregorian);
 
     const pad = (n) => n.toString().padStart(2, '0');
     const format = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
 
     return {
-        start: format(startObj.jy, startObj.jm, startObj.jd),
-        end: format(endObj.jy, endObj.jm, endObj.jd)
+        start: format(startShamsi.jy, startShamsi.jm, startShamsi.jd),
+        end: format(endShamsi.jy, endShamsi.jm, endShamsi.jd)
     };
 }
 

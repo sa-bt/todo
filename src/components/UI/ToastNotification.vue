@@ -1,64 +1,104 @@
-<script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useNotificationStore } from '@/stores/toast'
+<script setup>
+import { computed, watch, onBeforeUnmount } from 'vue'
+import { useNotificationStore } from '@/stores/notification'
+import { CheckCircle, AlertTriangle, Info, CircleAlert } from 'lucide-vue-next'
 
 const store = useNotificationStore()
-let timeout: number | undefined = undefined
+let timeout = null
 
-const bgClass = computed(() =>
-    store.type === 'success' ? 'bg-green-700' : 'bg-red-700'
-)
-
-// تعیین role/aria-live برای دسترسی‌پذیری
-const ariaLive = computed(() => (store.type === 'error' ? 'assertive' : 'polite'))
-
-// مدیریت تایمر بستن خودکار
-watch(() => store.message, (newMessage) => {
-  clearTimeout(timeout);
-
-  // بستن خودکار پس از 4 ثانیه فقط برای اعلان‌های موفقیت
-  if (newMessage && store.type === 'success') {
-    timeout = setTimeout(() => {
-      store.message = '';
-    }, 4000);
+// 🎨 استایل بر اساس نوع پیام
+const typeStyle = computed(() => {
+  switch (store.type) {
+    case 'error':
+      return { icon: AlertTriangle, bg: 'bg-red-600', ring: 'ring-red-400/40' }
+    case 'info':
+      return { icon: Info, bg: 'bg-blue-600', ring: 'ring-blue-400/40' }
+    case 'warning':
+      return { icon: CircleAlert, bg: 'bg-yellow-600', ring: 'ring-yellow-400/40' }
+    case 'success':
+    default:
+      return { icon: CheckCircle, bg: 'bg-[var(--color-primary)]', ring: 'ring-[var(--color-primary)]/30' }
   }
+})
+
+// 🔍 نمایش یا عدم نمایش Toast
+const isVisible = computed(() => store.message !== '')
+
+// 👀 واکنش به تغییر پیام
+watch(() => store.message, (newMessage) => {
+  if (timeout) clearTimeout(timeout)
+
+  if (newMessage) {
+    // 🔊 پخش صدا اگر فعال باشد
+    if (store.sound) {
+      const audio = new Audio('/sounds/toast.wav')
+      audio.volume = 0.6
+      audio.play().catch(() => {}) // جلوگیری از خطای autoplay
+    }
+
+    // ⏱ پاک شدن خودکار بر اساس مدت‌زمان ارسال‌شده از بک‌اند
+    timeout = setTimeout(() => {
+      store.clearNotification()
+    }, store.duration || 5000)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (timeout) clearTimeout(timeout)
 })
 </script>
 
 <template>
-  <transition name="fade-slide">
-    <div v-if="store.message"
-         :class="['fixed top-6 right-6 z-50 max-w-xs w-full p-4 rounded-xl shadow-lg flex items-center gap-3 text-white', bgClass]"
-         role="status"
-         :aria-live="ariaLive"
-         aria-atomic="true"
-         :aria-label="store.message"
+  <transition name="toast-fade-slide">
+    <div
+        v-if="isVisible"
+        class="fixed z-[9999] pointer-events-auto max-w-sm w-full flex items-start gap-4 px-5 py-4
+         rounded-2xl border shadow-2xl text-white backdrop-blur-lg"
+        :class="[typeStyle.bg, typeStyle.ring,
+           'bottom-6 left-1/2 translate-x-[-50%] sm:left-auto sm:right-6 sm:bottom-6 sm:translate-x-0']"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        :aria-label="store.message"
     >
-      <span class="text-xl">{{ store.type === 'success' ? '✅' : '❌' }}</span>
-      <span class="flex-1 text-sm text-right">{{ store.message }}</span>
-      <button @click="store.message = ''" class="font-bold ml-2 tap-target" aria-label="بستن اعلان">×</button>
+
+      <!-- آیکن -->
+      <component :is="typeStyle.icon" class="w-6 h-6 shrink-0 mt-1 text-white" />
+
+      <!-- متن -->
+      <div class="flex-1 text-sm font-medium leading-relaxed text-white">
+        {{ store.message }}
+      </div>
+
+      <!-- دکمه بستن -->
+      <button @click="store.clearNotification"
+              class="text-white text-lg font-bold ml-2 opacity-70 hover:opacity-100 transition"
+              aria-label="بستن اعلان">
+        ×
+      </button>
     </div>
   </transition>
 </template>
 
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active {
-  transition: all 0.3s ease;
+.toast-fade-slide-enter-active,
+.toast-fade-slide-leave-active {
+  transition: all 0.35s ease;
 }
-.fade-slide-enter-from {
+.toast-fade-slide-enter-from {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-12px) scale(0.95);
 }
-.fade-slide-enter-to {
+.toast-fade-slide-enter-to {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
-.fade-slide-leave-from {
+.toast-fade-slide-leave-from {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
-.fade-slide-leave-to {
+.toast-fade-slide-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px) scale(0.95);
 }
 </style>
