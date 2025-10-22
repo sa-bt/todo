@@ -4,11 +4,10 @@ import Datepicker from 'vue3-persian-datetime-picker'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
 import { useNotificationStore } from '@/stores/notification'
 
-
 const props = defineProps({
   show: { type: Boolean, default: false },
   goal: { type: Object, default: null },
-  autoCloseOnSubmit: { type: Boolean, default: true }, // برای بستن خودکار بعد از submit
+  autoCloseOnSubmit: { type: Boolean, default: true },
 })
 const emit = defineEmits(['close','taskCreated'])
 const notification = useNotificationStore()
@@ -16,21 +15,14 @@ const notification = useNotificationStore()
 const modalEl = ref(null)
 const datepickerRef = ref(null)
 
-// form state
-const selectedDate = ref(null)   // 'jYYYY/jMM/jDD'
-const mode = ref('preset')       // 'preset' | 'custom'
-const duration = ref(7)          // پیش‌فرض هفته
-const amount = ref(1)            // برای custom
+const selectedDate = ref(null)
+const mode = ref('preset')
+const duration = ref(7)
+const amount = ref(1)
 const loading = ref(false)
 
-// every-other-day (alternate) state
-const useAlternate = ref(false)          // فعال/غیرفعال
-const alternateType = ref('odd')         // 'odd' | 'even'
-/**
- * معنی:
- *  - odd  => از روز شروع (روز 1) حساب می‌کنیم: 1,3,5,...
- *  - even => از روز دوم حساب می‌کنیم: 2,4,6,...
- */
+const useAlternate = ref(false)
+const alternateType = ref('odd')
 
 const durationOptions = [
   { label: 'امروز', value: 1 },
@@ -39,7 +31,6 @@ const durationOptions = [
   { label: 'سال', value: 365 },
 ]
 
-// disabled states
 const numericDuration = computed(() => mode.value === 'preset' ? duration.value : Number(amount.value || 0))
 const isSubmitDisabled = computed(() => {
   if (loading.value) return true
@@ -48,7 +39,6 @@ const isSubmitDisabled = computed(() => {
   return false
 })
 
-// reset on close/open
 watch(() => props.show, async (v) => {
   document.documentElement.style.overflow = v ? 'hidden' : ''
   if (!v) {
@@ -87,19 +77,19 @@ function setShortcut(value) {
 }
 
 function displayPatternHint() {
-  // نمایش بخش یک‌روزدرمیان فقط وقتی مدت > 1 باشد
   return numericDuration.value > 1
 }
 
 async function submitTask() {
   if (isSubmitDisabled.value) {
-    if (!selectedDate.value) notification.setNotification('تاریخ شروع تسک را انتخاب کنید.', 'error')
-    if (mode.value === 'custom' && Number(amount.value) < 1) notification.setNotification('مدت تسک باید بزرگتر از ۰ باشد.', 'error')
+    if (!selectedDate.value)
+      notification.setNotification({ message: 'تاریخ شروع تسک را انتخاب کنید.', type: 'error' })
+    if (mode.value === 'custom' && Number(amount.value) < 1)
+      notification.setNotification({ message: 'مدت تسک باید بزرگتر از ۰ باشد.', type: 'error' })
     return
   }
 
   const taskDuration = numericDuration.value
-  // daily by default
   let pattern = 'daily'
   let step = 1
   let offset = 0
@@ -114,17 +104,16 @@ async function submitTask() {
   try {
     emit('taskCreated', {
       goal_id: props.goal.id,
-      start_date: selectedDate.value, // jYYYY/jMM/jDD (Jalali)
-      duration: taskDuration,         // days count
-      // افزوده برای پشتیبانی «یک‌روزدرمیان»
-      pattern,                        // 'daily' | 'alternate_odd' | 'alternate_even'
-      step,                           // 1 یا 2
-      offset,                         // 0 (فرد) یا 1 (زوج)
+      start_date: selectedDate.value,
+      duration: taskDuration,
+      pattern,
+      step,
+      offset,
     })
     if (props.autoCloseOnSubmit) emit('close')
   } catch(error) {
     console.error('Failed to create task:', error)
-    notification.setNotification('خطا در ثبت تسک!', 'error')
+    notification.setNotification({ message: 'خطا در ثبت تسک!', type: 'error' })
   } finally {
     loading.value = false
   }
@@ -144,7 +133,7 @@ async function submitTask() {
              dir="rtl"
              class="card-bg rounded-2xl w-full max-w-md shadow-2xl border border-token overflow-hidden text-right">
 
-          <!-- Header (sticky) -->
+          <!-- Header -->
           <header class="sticky top-0 z-10 card-bg border-b border-token px-5 py-4">
             <h2 id="task-modal-title" class="text-lg font-extrabold text-[var(--color-heading)]">
               افزودن تسک به: {{ props.goal?.title }}
@@ -154,7 +143,7 @@ async function submitTask() {
             </p>
           </header>
 
-          <!-- Body (scrollable) -->
+          <!-- Body -->
           <section class="px-5 py-4 max-h-[min(75vh,560px)] overflow-y-auto space-y-5">
             <!-- Start date -->
             <div>
@@ -170,17 +159,15 @@ async function submitTask() {
               />
             </div>
 
-            <!-- Duration mode -->
+            <!-- Duration -->
             <div>
               <label class="block mb-2 font-medium text-[var(--color-text)]">مدت تسک</label>
               <div class="flex gap-4 mb-3 text-sm">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" value="preset" v-model="mode" />
-                  انتخاب از لیست
+                  <input type="radio" value="preset" v-model="mode" /> انتخاب از لیست
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" value="custom" v-model="mode" />
-                  وارد کردن عدد
+                  <input type="radio" value="custom" v-model="mode" /> وارد کردن عدد
                 </label>
               </div>
 
@@ -193,14 +180,22 @@ async function submitTask() {
                       @click="setShortcut(opt.value)"
                       class="tap-target px-3 py-2 rounded-lg transition flex items-center gap-1 text-sm"
                       :class="{
-                      'bg-[var(--color-primary)] text-white shadow-md': duration === opt.value,
-                      'card-bg border border-token hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)]': duration !== opt.value
-                    }"
+                        'bg-[var(--color-primary)] text-white shadow-md': duration === opt.value,
+                        'card-bg border border-token hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)]': duration !== opt.value
+                      }"
                   >
                     {{ opt.label }}
                   </button>
                 </div>
-                <BaseSelect v-model="duration" :options="durationOptions" placeholder="انتخاب بازه" />
+
+                <!-- ✅ اصلاح: BaseSelect با name و label -->
+                <BaseSelect
+                    name="duration"
+                    label="مدت زمان"
+                    v-model="duration"
+                    :options="durationOptions"
+                    placeholder="انتخاب بازه"
+                />
               </div>
 
               <!-- Custom -->
@@ -218,7 +213,7 @@ async function submitTask() {
               </div>
             </div>
 
-            <!-- Alternate (every other day) -->
+            <!-- Alternate -->
             <div v-if="displayPatternHint()" class="surface border border-token rounded-xl p-4">
               <div class="flex items-center justify-between">
                 <div class="text-sm font-semibold text-[var(--color-heading)]">الگوی ایجاد تسک</div>
@@ -237,12 +232,10 @@ async function submitTask() {
                   </div>
                   <div class="flex gap-4 text-sm">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                      <input type="radio" value="odd" v-model="alternateType" />
-                      روزهای فرد (روز ۱، ۳، ۵، ...)
+                      <input type="radio" value="odd" v-model="alternateType" /> روزهای فرد (روز ۱، ۳، ۵، ...)
                     </label>
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                      <input type="radio" value="even" v-model="alternateType" />
-                      روزهای زوج (روز ۲، ۴، ۶، ...)
+                      <input type="radio" value="even" v-model="alternateType" /> روزهای زوج (روز ۲، ۴، ۶، ...)
                     </label>
                   </div>
                 </div>
@@ -250,7 +243,7 @@ async function submitTask() {
             </div>
           </section>
 
-          <!-- Footer (sticky) -->
+          <!-- Footer -->
           <footer class="sticky bottom-0 z-10 card-bg border-t border-token px-5 py-4 flex items-center justify-end gap-3">
             <button
                 @click="$emit('close')"
@@ -278,10 +271,7 @@ async function submitTask() {
 .fade-modal-enter-active, .fade-modal-leave-active { transition: opacity .2s ease; }
 .fade-modal-enter-from, .fade-modal-leave-to { opacity: 0; }
 .fade-modal-enter-to, .fade-modal-leave-from { opacity: 1; }
-
 .card-bg { background-color: var(--color-background); }
 .ring-focus:focus { outline: 3px solid color-mix(in oklab, var(--color-primary) 40%, white); outline-offset: 2px; }
-
-/* سطح ملایم برای باکس الگو */
 .surface { background: color-mix(in oklab, var(--color-background) 92%, white); }
 </style>

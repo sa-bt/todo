@@ -3,29 +3,27 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import BaseInput from '@/components/UI/BaseInput.vue'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
 import BaseTextArea from '@/components/UI/BaseTextArea.vue'
-import BaseCheckbox from '@/components/UI/BaseCheckbox.vue' // همان سوییچ سفارشی
+import BaseCheckbox from '@/components/UI/BaseCheckbox.vue'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
   editingGoal: { type: Object, default: null },
-  goals: { type: Array, default: () => [] }, // تمام اهداف کاربر
-  autoCloseOnSave: { type: Boolean, default: true }, // ✅ جدید
-
+  goals: { type: Array, default: () => [] },
+  autoCloseOnSave: { type: Boolean, default: true },
 })
 const emit = defineEmits(['close','save'])
 
-// ---- state ----
 const modalEl = ref(null)
 const firstInput = ref(null)
 
+// ---- state ----
 const title = ref('')
 const description = ref('')
-const priority = ref('medium')          // 'low' | 'medium' | 'high'
-const status = ref('pending')           // 'pending' | 'in_progress' | 'completed'
+const priority = ref('medium')
+const status = ref('pending')
 const parentId = ref(null)
 const sendTaskReminder = ref(true)
-const reminderTime = ref('09:00')       // HH:mm
-
+const reminderTime = ref('09:00')
 const saving = ref(false)
 const showErrors = ref(false)
 const errors = ref({})
@@ -42,17 +40,20 @@ const statusOptions = [
   { value: 'completed', label: 'تکمیل شده' },
 ]
 
-/**
- * ✅ فقط اهدافی قابل انتخاب به‌عنوان «والد» هستند که هیچ تسکی ندارند.
- *   - از stats.total (که استور از API می‌آورد) استفاده می‌کنیم.
- *   - خود آیتم در حال ویرایش را حذف می‌کنیم.
- */
+// ✅ فقط اهداف مستقل (بدون والد و بدون فرزند) مجازند به عنوان والد انتخاب شوند
 const parentOptions = computed(() => {
   const list = (props.goals || [])
-      .filter(g => typeof g?.stats?.total === 'number' && g.stats.total === 0)
+      .filter(g => !g.parent_id && g.children_count === 0)
       .filter(g => !props.editingGoal || g.id !== props.editingGoal.id)
 
   return [{ value: null, label: 'بدون والد' }, ...list.map(g => ({ value: g.id, label: g.title }))]
+})
+
+// ✅ غیرفعالسازی انتخاب والد برای اهدافی که خودشون والد یا فرزند هستند
+const isParentSelectDisabled = computed(() => {
+  const g = props.editingGoal
+  if (!g) return false
+  return g.children_count > 0 || g.parent_id !== null
 })
 
 // ---- lifecycle / prefill ----
@@ -137,9 +138,7 @@ async function save(){
       reminder_time: sendTaskReminder.value ? (reminderTime.value || null) : null,
     }
     emit('save', payload)
-    if (props.autoCloseOnSave) {
-      emit('close')
-    }
+    if (props.autoCloseOnSave) emit('close')
   } finally {
     saving.value = false
   }
@@ -155,20 +154,20 @@ async function save(){
           role="dialog" aria-modal="true" aria-labelledby="goal-modal-title"
           @click.self="emit('close')"
       >
-        <!-- Wrapper: RTL + scrollable body + sticky header/footer -->
         <div ref="modalEl"
              dir="rtl"
              class="card-bg w-full max-w-lg rounded-2xl border border-token shadow-2xl overflow-hidden text-right">
 
-          <!-- Header (sticky) -->
+          <!-- Header -->
           <header class="sticky top-0 z-10 card-bg border-b border-token px-5 py-4">
             <h2 id="goal-modal-title" class="text-xl font-extrabold text-[var(--color-heading)]">
               {{ editingGoal ? 'ویرایش هدف' : 'افزودن هدف جدید' }}
             </h2>
           </header>
 
-          <!-- Body (scrollable) -->
+          <!-- Body -->
           <section class="px-5 py-4 max-h-[min(75vh,640px)] overflow-y-auto space-y-4">
+
             <!-- Title -->
             <div>
               <label for="goal-title" class="block text-sm font-medium text-[var(--color-text)] mb-1">
@@ -187,9 +186,19 @@ async function save(){
             <!-- Parent -->
             <div>
               <label class="block text-sm font-medium text-[var(--color-text)] mb-1">والد</label>
-              <BaseSelect v-model="parentId" :options="parentOptions" placeholder="بدون والد" />
-              <p class="text-xs text-text-secondary mt-2">
-                فقط اهدافی نمایش داده می‌شوند که هیچ تسکی ندارند.
+              <BaseSelect
+                  v-model="parentId"
+                  :options="parentOptions"
+                  placeholder="بدون والد"
+                  :disabled="isParentSelectDisabled"
+              />
+              <p v-if="isParentSelectDisabled" class="text-xs text-amber-600 mt-2">
+                {{ editingGoal?.children_count > 0
+                  ? 'این هدف دارای اهداف فرزند است و نمی‌تواند والد دیگری داشته باشد.'
+                  : 'این هدف فرزند یک هدف دیگر است و نمی‌تواند والد جدید انتخاب کند.' }}
+              </p>
+              <p v-else class="text-xs text-text-secondary mt-2">
+                فقط اهدافی نمایش داده می‌شوند که هیچ والد و فرزندی ندارند.
               </p>
               <p v-if="showErrors && errors.parent_id" class="text-red-600 text-xs mt-1">{{ errors.parent_id }}</p>
             </div>
@@ -216,7 +225,6 @@ async function save(){
               />
               <div class="grid grid-cols-[1fr_auto] items-center gap-3">
                 <small class="text-text-secondary">زمان یادآوری</small>
-                <!-- time کنترل‌ها ذاتاً LTR هستند؛ برای نظم بهتر، همین بخش را LTR می‌گذاریم -->
                 <div class="w-32" dir="ltr">
                   <BaseInput v-model="reminderTime" :disabled="!sendTaskReminder" placeholder="09:00" type="time" />
                 </div>
@@ -225,7 +233,7 @@ async function save(){
             </div>
           </section>
 
-          <!-- Footer (sticky) -->
+          <!-- Footer -->
           <footer class="sticky bottom-0 z-10 card-bg border-t border-token px-5 py-4 flex items-center justify-end gap-2">
             <button
                 @click="emit('close')"
@@ -248,15 +256,12 @@ async function save(){
 </template>
 
 <style scoped>
-/* modal fade */
 .fade-modal-enter-active, .fade-modal-leave-active { transition: opacity .18s ease; }
 .fade-modal-enter-from, .fade-modal-leave-to { opacity: 0; }
 .fade-modal-enter-to, .fade-modal-leave-from { opacity: 1; }
 
-/* theme helpers */
 .card-bg { background-color: var(--color-background); }
 
-/* fallback focus ring */
 :focus-visible {
   outline-color: color-mix(in oklab, var(--color-primary) 40%, white);
   outline-offset: 2px;

@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia';
-import api from '@/plugins/axios';
-import { useNotificationStore } from './notification';
+import { defineStore } from 'pinia'
+import api from '@/plugins/axios'
+import { useNotificationStore } from './notification'
 
 export const useGoalsStore = defineStore('goals', {
     state: () => ({
@@ -9,110 +9,93 @@ export const useGoalsStore = defineStore('goals', {
     }),
 
     actions: {
-        /**
-         * بارگذاری اهداف از API
-         * @param {object} params - شامل فیلترهایی مانند without_children
-         */
-        async fetchGoals(params) {
-            const toast = useNotificationStore();
+        findGoalIndex(id) {
+            return this.goals.findIndex((g) => g.id === id)
+        },
 
-            // ✅ اصلاح: اگر در حال بارگذاری است، بلافاصله خارج شو (جلوگیری از فراخوانی‌های همزمان)
+        async fetchGoals(params = {}) {
+            const notify = useNotificationStore()
+
             if (this.loading) {
-                console.log('Fetch skipped: currently loading.');
-                return;
+                console.log('⏳ fetchGoals skipped: already loading.')
+                return
+            }
+            if (this.goals.length > 0 && !params.force) {
+                console.log('📦 fetchGoals skipped: data already loaded.')
+                return
             }
 
-            // ✅ اصلاح: اگر اهداف از قبل لود شده‌اند، خارج شو (جلوگیری از فراخوانی‌های مکرر در Remount)
-            if (this.goals.length > 0) {
-                console.log('Fetch skipped: data already exists.');
-                return;
-            }
-
-            this.loading = true;
-            let url = '/goals';
+            this.loading = true
             try {
-                if (params) {
-                    const query = new URLSearchParams();
-                    if (params.without_children)
-                        query.append('without_children', '1');
-                    url += `?${query.toString()}`;
-                }
-                const res = await api.get(url);
-                this.goals = res.data.data;
-            }
-            catch (err) {
-                console.error('fetchGoals error:', err);
-                toast.handleApiError(err);
-            }
-            finally {
-                this.loading = false;
+                const query = new URLSearchParams()
+                if (params.without_children) query.append('without_children', '1')
+                const res = await api.get(`/goals${query.toString() ? `?${query}` : ''}`)
+                this.goals = res.data.data
+            } catch (err) {
+                console.error('fetchGoals error:', err)
+                notify.handleApiError(err, 'خطا در بارگذاری اهداف')
+            } finally {
+                this.loading = false
             }
         },
-        /**
-         * ایجاد یک هدف جدید
-         * @param {object} goal - داده‌های هدف
-         */
+
         async addGoal(goal) {
-            const toast = useNotificationStore();
+            const notify = useNotificationStore()
             try {
-                const res = await api.post('/goals', goal);
-                this.goals.push(res.data.data);
-                toast.setNotification('هدف با موفقیت ایجاد شد.', 'success');
-                return res.data.data;
+                const res = await api.post('/goals', goal)
+                this.goals.push(res.data.data)
+                notify.setNotification({ message: '🎯 هدف با موفقیت ایجاد شد.', type: 'success' })
+                return res.data.data
             } catch (err) {
-                toast.handleApiError(err);
+                console.error('addGoal error:', err)
+                notify.handleApiError(err, 'ایجاد هدف با خطا مواجه شد.')
             }
         },
 
-        /**
-         * ایجاد تسک‌های روزانه برای یک هدف در یک بازه زمانی
-         * @param {object} payload - شامل goal_id، start_date و duration
-         */
-        async addGoalTask(payload) {
-            const toast = useNotificationStore();
-            try {
-                const res = await api.post('/goal-tasks', payload);
-                toast.setNotification('تسک‌ها با موفقیت ایجاد شدند.', 'success');
-                return res.data;
-            } catch (err) {
-                toast.handleApiError(err);
-            }
-        },
-
-        /**
-         * به‌روزرسانی یک هدف موجود
-         * @param {number} id - آیدی هدف
-         * @param {object} payload - داده‌های به‌روزرسانی
-         */
         async updateGoal(id, payload) {
-            const toast = useNotificationStore();
+            const notify = useNotificationStore()
             try {
-                const res = await api.put(`/goals/${id}`, payload);
-                const index = this.goals.findIndex((g) => g.id === id);
-                if (index !== -1) {
-                    // به‌روزرسانی واکنش‌پذیر آیتم در لیست موجود
-                    Object.assign(this.goals[index], res.data.data);
-                }
-                toast.setNotification('هدف با موفقیت به‌روزرسانی شد.', 'success');
-                return res.data.data;
+                const res = await api.put(`/goals/${id}`, payload)
+                const i = this.findGoalIndex(id)
+                if (i !== -1) Object.assign(this.goals[i], res.data.data)
+                notify.setNotification({ message: '✅ هدف با موفقیت بروزرسانی شد.', type: 'success' })
+                return res.data.data
             } catch (err) {
-                toast.handleApiError(err);
+                console.error('updateGoal error:', err)
+                notify.handleApiError(err, 'بروزرسانی هدف ناموفق بود.')
             }
         },
 
-        /**
-         * حذف یک هدف
-         * @param {number} id - آیدی هدف
-         */
         async removeGoal(id) {
-            const toast = useNotificationStore();
+            const notify = useNotificationStore()
             try {
-                await api.delete(`/goals/${id}`);
-                this.goals = this.goals.filter((g) => g.id !== id);
-                toast.setNotification('هدف با موفقیت حذف شد.', 'success');
+                await api.delete(`/goals/${id}`)
+                this.goals = this.goals.filter((g) => g.id !== id)
+                notify.setNotification({ message: '🗑️ هدف با موفقیت حذف شد.', type: 'success' })
             } catch (err) {
-                toast.handleApiError(err);
+                console.error('removeGoal error:', err)
+                notify.handleApiError(err, 'حذف هدف با خطا مواجه شد.')
+            }
+        },
+
+        async addGoalTask(payload) {
+            const notify = useNotificationStore()
+            try {
+                const res = await api.post('/goal-tasks', payload)
+                notify.setNotification({ message: '📝 تسک با موفقیت اضافه شد.', type: 'success' })
+
+                if (payload.goal_id) {
+                    const i = this.findGoalIndex(payload.goal_id)
+                    if (i !== -1 && res.data.goal) {
+                        this.goals[i] = res.data.goal
+                    }
+                }
+
+                return res.data
+            } catch (err) {
+                console.error('addGoalTask error:', err)
+                notify.handleApiError(err, 'افزودن تسک ناموفق بود.')
             }
         },
     },
-});
+})

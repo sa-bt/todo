@@ -1,16 +1,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useGoalsStore } from '@/stores/goals'
-import { useNotificationStore } from '@/stores/notification'
 import GoalModal from '@/components/Goals/GoalModal.vue'
 import AddTaskModal from '@/components/Goals/AddTaskModal.vue'
 import GoalsList from '@/components/Goals/List.vue'
 
-/* آیکون های Lucide */
-import { Target, ListTree, CheckCircle2, Plus, Clock } from 'lucide-vue-next'
+/* آیکون‌های Lucide */
+import { Target, CheckCircle2, Plus, Clock } from 'lucide-vue-next'
 
 const store = useGoalsStore()
-const notificationStore = useNotificationStore()
 
 const showModal = ref(false)
 const editingGoal = ref(null)
@@ -18,18 +16,15 @@ const showTaskModal = ref(false)
 const selectedGoal = ref(null)
 
 const goals = computed(() => store.goals)
-const totalCount = computed(() => store.goals.length)
-// تغییر به اهداف در حال انجام (In Progress)
+const totalCount = computed(() => store.goals?.length || 0)
 const inProgressCount = computed(() => store.goals.filter(g => g.status === 'in_progress').length)
 const completedCount = computed(() => store.goals.filter(g => g.status === 'completed').length)
 
 onMounted(async () => {
-  // فراخوانی ساده: منطق جلوگیری از فراخوانی‌های مکرر اکنون در Pinia Store مدیریت می‌شود.
   try {
-    await store.fetchGoals({ without_children: false });
+    await store.fetchGoals({ without_children: false })
   } catch (error) {
-    // error handling handled by store's action
-    console.error('Initial goals fetch failed:', error);
+    console.error('Initial goals fetch failed:', error)
   }
 })
 
@@ -44,53 +39,27 @@ function openTaskModal(goal) {
 }
 
 async function handleSave(payload) {
-  try {
-    if (editingGoal.value) {
-      await store.updateGoal(editingGoal.value.id, payload)
-      notificationStore.displayMessage('هدف با موفقیت بروزرسانی شد!', 'success')
-    } else {
-      await store.addGoal(payload)
-      notificationStore.displayMessage('هدف با موفقیت اضافه شد!', 'success')
-    }
-    showModal.value = false
-  } catch (err) {
-    console.error('Goal Save/Update failed:', err);
-    notificationStore.handleApiError(err);
+  if (editingGoal.value) {
+    await store.updateGoal(editingGoal.value.id, payload)
+  } else {
+    await store.addGoal(payload)
   }
+  showModal.value = false
 }
 
-/** تابع مدیریت حذف هدف و نمایش اعلان */
 async function handleDeleteGoal(goalId) {
-  try {
-    await store.removeGoal(goalId)
-    notificationStore.displayMessage('هدف با موفقیت حذف شد!', 'success')
-  } catch (err) {
-    console.error('Goal Deletion failed:', err);
-    notificationStore.handleApiError(err);
-  }
+  await store.removeGoal(goalId)
 }
 
 async function handleTaskSubmit(payload) {
-  try {
-    // فرض بر این است که addGoalTask در Store state هدف مربوطه را به‌روز می‌کند
-    await store.addGoalTask(payload)
-
-    notificationStore.displayMessage('تسک با موفقیت اضافه شد!', 'success')
-    showTaskModal.value = false
-
-    // فراخوانی store.fetchGoals() حذف شده است.
-  } catch (err) {
-    console.error('Task Submission failed:', err);
-    notificationStore.handleApiError(err);
-  }
+  await store.addGoalTask(payload)
+  showTaskModal.value = false
 }
 </script>
 
 <template>
-
   <div class="space-y-6">
-    <!-- نمایش وضعیت بارگذاری (Skeletons) -->
-    <!-- حالا فقط به store.loading اعتماد می‌کنیم -->
+    <!-- حالت بارگذاری -->
     <div v-if="store.loading" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="rounded-2xl card-bg border border-token p-6 animate-pulse h-32"></div>
       <div class="rounded-2xl card-bg border border-token p-6 animate-pulse h-32"></div>
@@ -99,7 +68,6 @@ async function handleTaskSubmit(payload) {
 
     <template v-else>
       <!-- کارت‌های آمار -->
-      <!-- این تگ پایانی </div> برای این کانتینر در نسخه محلی شما احتمالا جا افتاده بود. -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="rounded-2xl p-6 card-bg border border-token shadow-sm hover:shadow-md transition">
           <div class="flex items-center justify-between">
@@ -133,14 +101,14 @@ async function handleTaskSubmit(payload) {
           </div>
           <div class="mt-4 text-3xl font-bold">{{ completedCount }}</div>
         </div>
-      </div> <!-- ✅ تگ پایانی کانتینر آمار -->
+      </div>
 
       <!-- هدر و دکمه افزودن -->
       <div class="flex items-center justify-between gap-3">
         <h2 class="text-lg font-bold text-[var(--color-heading)]">مدیریت اهداف</h2>
         <button
             @click="openModal()"
-            class="tap-target inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white shadow-sm transition ring-focus"
+            class="tap-target inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 text-white shadow-sm transition ring-focus focus:outline-none"
         >
           <Plus class="w-4 h-4" />
           افزودن هدف جدید
@@ -166,7 +134,7 @@ async function handleTaskSubmit(payload) {
       />
     </template>
 
-    <!-- مودال‌های مدیریت هدف و تسک -->
+    <!-- مودال‌ها -->
     <GoalModal
         :show="showModal"
         :editingGoal="editingGoal"
@@ -175,6 +143,7 @@ async function handleTaskSubmit(payload) {
         @save="handleSave"
     />
     <AddTaskModal
+        v-if="selectedGoal"
         :show="showTaskModal"
         :goal="selectedGoal"
         @close="showTaskModal = false"
