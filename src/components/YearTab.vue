@@ -163,7 +163,11 @@ const yearOptions = years.map(y => ({ value:y, label: String(y) }))
   <div class="w-full min-h-screen p-6 bg-[var(--color-background)] text-[var(--color-text)]" @mousemove="moveTooltip">
     <!-- سال -->
     <div class="w-full flex justify-end mb-4">
-      <BaseSelect v-model="selectedYear" :options="yearOptions" class="w-40" placeholder="انتخاب سال" />
+      <BaseSelect v-model="selectedYear"
+       :options="yearOptions" 
+       class="w-40"
+        name="year" 
+        placeholder="انتخاب سال" />
     </div>
 
     <!-- کارت‌ها -->

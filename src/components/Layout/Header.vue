@@ -10,7 +10,10 @@ import { getTodayShamsi } from '@/utils/jalali'
 import BaseTooltip from '@/components/UI/BaseTooltip.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useSystemNotificationsStore } from '@/stores/systemNotifications'
-
+const weekdayName = computed(() => {
+  const days = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه']
+  return days[new Date().getDay()]
+})
 const router = useRouter()
 const route  = useRoute()
 const auth   = useAuthStore()
@@ -44,8 +47,24 @@ function toggleNotifications() {
 async function onClickNotification(n) {
   if (!n.read_at) await sysNotifs.markRead(n.id)
   notificationsOpen.value = false
-  if (n.url) router.push(n.url)
+
+  if (n.url) {
+    let target = n.url
+
+    // اگر شامل http یا https بود، فقط مسیر (path) رو بگیر
+    if (/^https?:\/\//.test(target)) {
+      try {
+        const urlObj = new URL(target)
+        target = urlObj.pathname + urlObj.search + urlObj.hash
+      } catch (e) {
+        console.warn('Invalid URL in notification:', target)
+      }
+    }
+
+    router.push(target)
+  }
 }
+
 function markAllRead() { sysNotifs.markAllRead() }
 function loadNextPage() { sysNotifs.loadNextPage() }
 
@@ -114,16 +133,26 @@ const isLinkActive = (routeName) => route.name === routeName
     <div class="flex items-center gap-3">
       <ThemeSwitcher class="hidden lg:flex ml-3" />
 
-      <BaseTooltip text="مشاهده روزانه" placement="bottom">
-        <button
-            @click="goToDailyView"
-            class="hidden md:flex items-center gap-1 px-3 py-1.5 rounded-lg border border-token surface-soft hover:surface-mute focus:ring-2 focus:ring-[var(--color-primary)]/30 transition text-sm focus:outline-none"
-            type="button"
-        >
-          <Calendar class="w-4 h-4 text-[var(--color-primary)]" aria-hidden="true" />
-          <span>{{ shamsiDate }}</span>
-        </button>
-      </BaseTooltip>
+     <BaseTooltip text="مشاهده روزانه" placement="bottom">
+  <button
+      @click="goToDailyView"
+      class="hidden md:flex flex-col items-center justify-center px-3 py-2 rounded-lg border border-token surface-soft hover:surface-mute focus:ring-2 focus:ring-[var(--color-primary)]/30 transition text-sm focus:outline-none"
+      type="button"
+  >
+    <div class="flex items-center gap-1">
+      <Calendar class="w-4 h-4 text-[var(--color-primary)]" aria-hidden="true" />
+      <span class="font-semibold text-[var(--color-heading)]">
+        {{ shamsiDate }}
+      </span>
+    </div>
+    <span class="text-xs font-medium text-[var(--color-primary)] mt-0.5 tracking-wide">
+      {{ weekdayName }}
+    </span>
+  </button>
+</BaseTooltip>
+
+
+
 
       <!-- نوتیف‌ها -->
       <div class="relative">
@@ -289,6 +318,14 @@ const isLinkActive = (routeName) => route.name === routeName
       class="md:hidden flex flex-col gap-2 surface px-4 py-2 shadow-lg border-b border-token"
       role="menu"
   >
+  <!-- نمایش تاریخ و روز در موبایل -->
+<div class="md:hidden flex items-center justify-center gap-2 border-y border-token surface-soft py-2">
+  <Calendar class="w-4 h-4 text-[var(--color-primary)]" aria-hidden="true" />
+  <div class="flex flex-col items-center leading-tight">
+    <span class="text-sm font-semibold text-[var(--color-heading)]">{{ shamsiDate }}</span>
+    <span class="text-[11px] text-[var(--color-primary)] mt-0.5">{{ weekdayName }}</span>
+  </div>
+</div>
     <RouterLink
         v-for="link in navigationLinks"
         :key="link.to"

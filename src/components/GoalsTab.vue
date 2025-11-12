@@ -138,7 +138,6 @@ async function handleTaskSubmit(payload) {
     <GoalModal
         :show="showModal"
         :editingGoal="editingGoal"
-        :goals="store.goals"
         @close="showModal = false"
         @save="handleSave"
     />

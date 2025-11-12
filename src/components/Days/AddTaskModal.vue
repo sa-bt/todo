@@ -63,6 +63,7 @@ function submit() {
             <BaseSelect
                 v-model="selectedGoalId"
                 :options="availableGoals.map(g => ({ value: g.id, label: g.title }))"
+                name="هدف"
                 placeholder="-- انتخاب هدف --"
                 class="w-full"
             />

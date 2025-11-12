@@ -1,40 +1,59 @@
-// public/sw.js
+/* =======================================================
+   Service Worker for Todo WebPush Notifications (RTL)
+   ======================================================= */
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
+/**
+ * Push event handler
+ */
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
     payload = event.data ? event.data.json() : {};
   } catch (e) {
-    // اگر JSON نبود، بیخیال
+    console.error('Push payload parse error:', e);
   }
 
-  const title = payload.title || 'پیام جدید';
-  const url   = payload.url || (payload.data && payload.data.url) || '/';
+  const title = payload.title || 'اعلان جدید';
+  const body = payload.body || 'مشاهده کنید';
+  const url = payload.url || (payload.data && payload.data.url) || '/';
+
+  // 🔹 اضافه کردن جهت راست‌به‌چپ در همین‌جا (نه در بک‌اند)
+  // U+202B → شروع راست‌به‌چپ  |  U+202C → پایان راست‌به‌چپ
+  const rtlBody = '\u202B' + body + '\u202C';
+  const rtlTitle = '\u202B' + title + '\u202C';
 
   const options = {
-    body:   payload.body || 'مشاهده کنید',
-    icon:   payload.icon || '/pwa-192x192.png',
-    badge:  payload.badge || '/pwa-192x192.png',
-    vibrate: payload.vibrate || [100, 50, 100],
-    // همیشه یک آبجکت نگه می‌داریم تا در notificationclick به شکل ثابت بخونیم
-    data:   { url },
+    body: rtlBody,
+    icon: payload.icon || '/icons/notification.png',
+    badge: payload.badge || '/icons/notification.png',
+    vibrate: [100, 50, 100],
+    data: { url },
+    dir: 'rtl',
+    lang: 'fa-IR',
     actions: payload.actions || [{ action: 'open', title: 'باز کردن' }],
-    // اختیاری: tag/renotify برای جلوگیری از اسپم چند نوتیف مشابه
-    tag: payload.tag || undefined,
-    renotify: Boolean(payload.renotify) || false
+    tag: payload.tag || 'todo-webpush',
+    renotify: !!payload.renotify,
+    requireInteraction: false
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // نمایش نوتیف
+  event.waitUntil(
+    self.registration.showNotification(rtlTitle, options)
+  );
 });
 
+/**
+ * Click event handler
+ */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification && event.notification.data && event.notification.data.url) || '/';
+  const url =
+    (event.notification.data && event.notification.data.url) ||
+    '/';
 
-  // اگر اکشن مشخص شده:
   if (event.action === 'open') {
     event.waitUntil(openOrFocus(url));
     return;
@@ -44,19 +63,38 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(openOrFocus(url));
 });
 
+/**
+ * Opens existing tab or creates a new one
+ */
 async function openOrFocus(url) {
-  const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-  for (const client of windowClients) {
-    if (client.url === url && 'focus' in client) return client.focus();
+  const allClients = await clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+  for (const client of allClients) {
+    // اگر تب فعلاً بازه، فقط فوکوس کن
+    if (client.url === url && 'focus' in client) {
+      return client.focus();
+    }
   }
-  if (clients.openWindow) return clients.openWindow(url);
+  // در غیر این صورت تب جدید باز کن
+  if (clients.openWindow) {
+    return clients.openWindow(url);
+  }
 }
 
-// اختیاری: اگر کلید VAPID عوض شد، مرورگر بعضی وقت‌ها این ایونت رو می‌فرسته
+/**
+ * Optional: handle push subscription refresh
+ */
 self.addEventListener('pushsubscriptionchange', async (event) => {
   try {
     const reg = await self.registration;
-    const newSub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: /* TODO: کلید پابلیک base64 به Uint8Array */ null });
+    const newSub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: null, // TODO: add VAPID public key if needed
+    });
     // اینجا می‌تونی newSub رو با fetch به بک‌اند POST کنی تا endpoint جدید ذخیره بشه
-  } catch (_) {}
+  } catch (e) {
+    console.error('Push subscription change error:', e);
+  }
 });

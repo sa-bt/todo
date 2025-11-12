@@ -1,8 +1,7 @@
-// stores/userSetting.ts
+// stores/userSetting.js
 import { defineStore } from 'pinia'
 import api from '@/plugins/axios'
 import { useNotificationStore } from '@/stores/notification'
-
 
 export const useUserSettingStore = defineStore('userSetting', {
     state: () => ({
@@ -15,7 +14,14 @@ export const useUserSettingStore = defineStore('userSetting', {
     }),
 
     actions: {
-        async load() {
+        /**
+         * بارگذاری تنظیمات کاربر از سرور
+         */
+        async load(force = false) {
+            const notify = useNotificationStore()
+
+            if (this.loaded && !force) return
+
             try {
                 const res = await api.get('/user-setting')
                 const data = res.data.data || res.data || {}
@@ -28,12 +34,18 @@ export const useUserSettingStore = defineStore('userSetting', {
                 this.task_reminder_time = data.task_reminder_time?.substring(0, 5) || '09:00'
 
                 this.loaded = true
-            } catch (err) {
-                useNotificationStore().handleApiError(err)
+
+            } catch (error) {
+                notify.handleApiError(error)
             }
         },
 
+        /**
+         * ذخیره تنظیمات در سرور
+         */
         async save() {
+            const notify = useNotificationStore()
+
             try {
                 await api.post('/user-setting', {
                     daily_report: this.daily_report,
@@ -43,9 +55,15 @@ export const useUserSettingStore = defineStore('userSetting', {
                     per_task_progress: this.per_task_progress,
                 })
 
-                useNotificationStore().setNotification('تنظیمات ذخیره شد ✅', 'success')
-            } catch (err) {
-                useNotificationStore().handleApiError(err)
+                // ✅ نمایش پیام موفقیت واضح و هماهنگ با تم Toast
+                notify.setNotification({
+                    message: 'تنظیمات با موفقیت ذخیره شد',
+                    type: 'success',
+                    icon: 'sparkles',
+                    duration: 4000,
+                })
+            } catch (error) {
+                notify.handleApiError(error)
             }
         },
     },

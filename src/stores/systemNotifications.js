@@ -4,15 +4,15 @@ import api from "../plugins/axios.js";
 
 export const useSystemNotificationsStore = defineStore('systemNotifications', {
     state: () => ({
-        items: [],            // لیست برای منوی هدر/صفحه
+        items: [],
         unreadCount: 0,
-        nextPageUrl: null,    // صفحه بعدی (pagination)
+        nextPageUrl: null,
         loading: false,
         error: null,
         perPage: 10,
 
-        _pollTimer: null,     // polling unread count
-        _attachedSW: false,   // جلوگیری از دوبار bind شدن به Service Worker
+        _pollTimer: null,
+        _attachedSW: false,
     }),
 
     getters: {
@@ -24,9 +24,7 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
         // --- Helpers ---
         _toast() { return useNotificationStore() },
 
-        // اگر خروجی successResponse شما data/meta را wrap می‌کند:
         _extractListResponse(payload) {
-            // پشتیبانی از هر دو حالت: {data:[...], meta:{...}} یا خود آرایه
             const list = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : [])
             const meta = payload?.meta ?? null
             return { list, meta }
@@ -46,7 +44,6 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
                 await this.refreshUnreadCount()
             } catch (err) {
                 this.error = err?.message || 'خطا در دریافت اعلان‌ها'
-                // toast خطا
                 this._toast().handleApiError(err)
             } finally {
                 this.loading = false
@@ -69,10 +66,8 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
         async refreshUnreadCount() {
             try {
                 const { data } = await api.get('/notifications/unread-count')
-                // successResponse ممکنه مقدار رو داخل data بذاره
                 this.unreadCount = data?.data?.count ?? data?.count ?? 0
             } catch (err) {
-                // فقط لگ و نمایش اختیاری
                 console.warn('refreshUnreadCount error', err)
             }
         },
@@ -84,6 +79,14 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
                 const idx = this.items.findIndex(n => n.id === id)
                 if (idx !== -1) this.items[idx] = updated
                 if (this.unreadCount > 0) this.unreadCount--
+
+                // ✅ Toast موفقیت
+                this._toast().setNotification({
+                    type: 'success',
+                    icon: 'check-circle',
+                    message: 'اعلان به عنوان خوانده شده علامت خورد ✅',
+                    duration: 3000
+                })
             } catch (err) {
                 this._toast().handleApiError(err)
             }
@@ -95,6 +98,15 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
                 const nowIso = new Date().toISOString()
                 this.items = this.items.map(n => ({ ...n, read_at: n.read_at || nowIso }))
                 this.unreadCount = 0
+
+                // ✅ Toast موفقیت
+                this._toast().setNotification({
+                    type: 'info',
+                    icon: 'check-check',
+                    message: 'همهٔ اعلان‌ها خوانده شدند 📬',
+                    sound: false,
+                    duration: 3500
+                })
             } catch (err) {
                 this._toast().handleApiError(err)
             }
@@ -104,6 +116,15 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
             try {
                 await api.delete(`/notifications/${id}`)
                 this.items = this.items.filter(n => n.id !== id)
+
+                // ✅ Toast موفقیت
+                this._toast().setNotification({
+                    type: 'warning',
+                    icon: 'trash-2',
+                    message: 'اعلان حذف شد 🗑️',
+                    sound: false,
+                    duration: 3000
+                })
             } catch (err) {
                 this._toast().handleApiError(err)
             }
@@ -115,6 +136,15 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
                 this.items = []
                 this.unreadCount = 0
                 this.nextPageUrl = null
+
+                // ✅ Toast موفقیت
+                this._toast().setNotification({
+                    type: 'warning',
+                    icon: 'trash',
+                    message: 'تمام اعلان‌ها حذف شدند 🗑️',
+                    sound: false,
+                    duration: 4000
+                })
             } catch (err) {
                 this._toast().handleApiError(err)
             }
@@ -141,9 +171,16 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
                     time: new Date().toISOString(),
                     read_at: null
                 }
-                // prepend & clamp to perPage
                 this.items = [n, ...this.items].slice(0, this.perPage)
                 this.unreadCount++
+
+                // ✅ Toast هنگام دریافت نوتیف جدید
+                this._toast().setNotification({
+                    type: 'info',
+                    icon: 'bell',
+                    message: `اعلان جدید: ${n.title}`,
+                    duration: 4500
+                })
             })
 
             this._attachedSW = true

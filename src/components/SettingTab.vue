@@ -1,80 +1,95 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import api from '@/plugins/axios'
 import { registerWebPush, requestNotificationPermission } from '@/utils/webpush'
+
+// ✅ استورها
+import { useNotificationStore } from '@/stores/notification'
+import { useUserSettingStore } from '@/stores/userSetting'
 
 // ✅ کامپوننت‌های Base
 import BaseCheckbox from '@/components/UI/BaseCheckbox.vue'
 import BaseTimeSelect from '@/components/UI/BaseTimeSelect.vue'
-import {useNotificationStore} from "../stores/notification.js";
 
 const notificationStore = useNotificationStore()
+const userSetting = useUserSettingStore()
 
-// 💡 متغیرهای محلی که به v-model متصل هستند
+// 💡 اتصال مستقیم state استور به v-modelها
 const dailyReport = ref(false)
-const reportTime = ref('08:00') // فرمت HH:MM
+const reportTime = ref('08:00')
 const taskReminder = ref(false)
-const taskReminderTime = ref('09:00') // فرمت HH:MM
+const taskReminderTime = ref('09:00')
 const perTaskProgress = ref(false)
 
 const notificationPermission = ref(typeof Notification !== 'undefined' ? Notification.permission : 'denied')
 const showHelp = ref(false)
 const isSaving = ref(false)
+const isPWA = ref(false)
 
 // تشخیص PWA
-const isPWA = ref(false)
 onMounted(() => {
   if (typeof window !== 'undefined') {
     isPWA.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
   }
 })
 
-// معادل فارسی مجوزها
+// برچسب فارسی مجوزها
 const permissionLabels = {
   granted: 'فعال (مجوز داده شده)',
   denied: 'غیرفعال (مسدود شده)',
   default: 'نامشخص (نیاز به اجازه)',
 }
 
-// رنگ وضعیت نوتیفیکیشن
-const statusColor = computed(() => {
-  return {
-    'text-[var(--color-text-secondary)]': notificationPermission.value === 'default',
-    'text-green-500 font-bold': notificationPermission.value === 'granted',
-    'text-red-500 font-bold': notificationPermission.value === 'denied',
-  }
-})
+const statusColor = computed(() => ({
+  'text-[var(--color-text-secondary)]': notificationPermission.value === 'default',
+  'text-green-500 font-bold': notificationPermission.value === 'granted',
+  'text-red-500 font-bold': notificationPermission.value === 'denied',
+}))
 
 // ---------------------------------------------
-// توابع API
+// 🔹 توابع تعامل با استور
 // ---------------------------------------------
 
-// بارگذاری تنظیمات
+// بارگذاری از استور
 async function loadSetting() {
+  await userSetting.load()
+
+  // مقداردهی به local refs از state استور
+  dailyReport.value = userSetting.daily_report
+  taskReminder.value = userSetting.task_reminder
+  perTaskProgress.value = userSetting.per_task_progress
+  reportTime.value = userSetting.report_time
+  taskReminderTime.value = userSetting.task_reminder_time
+}
+
+// ذخیره تنظیمات از طریق استور
+async function saveSetting() {
+  isSaving.value = true
   try {
-    // ✅ استفاده از روت صحیح /user-setting برای GET
-    const res = await api.get('/user-setting')
+    // sync داده‌های local با استور
+    userSetting.daily_report = dailyReport.value
+    userSetting.task_reminder = taskReminder.value
+    userSetting.per_task_progress = perTaskProgress.value
+    userSetting.report_time = reportTime.value
+    userSetting.task_reminder_time = taskReminderTime.value
 
-    // 💡 اطمینان از مقداردهی اولیه به درستی
-    const settings = res.data.data || res.data || {}
+    await userSetting.save()
 
-    dailyReport.value = Boolean(settings.daily_report ?? false)
-    taskReminder.value = Boolean(settings.task_reminder ?? false)
-    perTaskProgress.value = Boolean(settings.per_task_progress ?? false)
+    // ✅ ثبت webpush فقط اگر لازم بود
+    const needsWebPush =
+        (dailyReport.value || taskReminder.value || perTaskProgress.value) &&
+        notificationPermission.value === 'granted'
 
-    // ✅ تبدیل HH:MM:SS (از دیتابیس) به HH:MM (برای v-model در BaseTimeSelect)
-    reportTime.value = settings.report_time ? settings.report_time.substring(0, 5) : '08:00'
-    taskReminderTime.value = settings.task_reminder_time ? settings.task_reminder_time.substring(0, 5) : '09:00'
-  } catch(err) {
-    console.error('Error loading settings:', err)
+    if (needsWebPush) await registerWebPush()
+  } finally {
+    isSaving.value = false
   }
 }
 
-// درخواست permission دوباره
+// درخواست مجوز مرورگر
 async function requestPermission() {
   const permission = await requestNotificationPermission()
   notificationPermission.value = permission
-  if(permission === 'granted') {
+  if (permission === 'granted') {
     showHelp.value = false
     notificationStore.setNotification('نوتیفیکیشن فعال شد', 'success')
     await registerWebPush()
@@ -84,51 +99,20 @@ async function requestPermission() {
   }
 }
 
-// ذخیره تنظیمات
-async function saveSetting() {
-  // اگر هرکدام از اعلان‌ها فعال بود، باید Web Push را ثبت کنیم.
-  const needsWebPush = (dailyReport.value || taskReminder.value || perTaskProgress.value) && notificationPermission.value === 'granted'
-
-  isSaving.value = true
-  try {
-    // ✅ استفاده از روت صحیح /user-setting برای POST
-    await api.post('/user-setting', {
-      daily_report: dailyReport.value, // Boolean
-      report_time: reportTime.value,   // HH:MM
-      task_reminder: taskReminder.value, // Boolean
-      task_reminder_time: taskReminderTime.value, // HH:MM
-      per_task_progress: perTaskProgress.value, // Boolean
-    })
-
-    if (needsWebPush) {
-      await registerWebPush()
-    }
-
-    notificationStore.setNotification('تنظیمات با موفقیت ذخیره شد', 'success')
-
-  } catch(err) {
-    console.error('Error saving settings:', err)
-    notificationStore.setNotification('خطا در ذخیره تنظیمات', 'error')
-  } finally {
-    isSaving.value = false
-  }
-}
-
-// WATCH: اگر کاربر یکی از سوئیچ‌ها را فعال کرد و مجوز نداده بود.
-watch([dailyReport, taskReminder, perTaskProgress], async ([daily, task, perTask]) => {
-  if(daily || task || perTask) {
-    if(notificationPermission.value === 'default') {
+// Watch برای فعال‌سازی مجوزها در صورت نیاز
+watch([dailyReport, taskReminder, perTaskProgress], async ([daily, task, per]) => {
+  if (daily || task || per) {
+    if (notificationPermission.value === 'default') {
       const perm = await requestNotificationPermission()
       notificationPermission.value = perm
-      if(perm !== 'granted') {
-        showHelp.value = true
-      }
-    } else if(notificationPermission.value === 'denied') {
+      if (perm !== 'granted') showHelp.value = true
+    } else if (notificationPermission.value === 'denied') {
       showHelp.value = true
     }
   }
 })
 
+// بارگذاری اولیه تنظیمات
 onMounted(loadSetting)
 </script>
 
