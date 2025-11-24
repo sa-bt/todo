@@ -1,53 +1,46 @@
-// stores/theme.js
+// src/stores/theme.js
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-// تعریف تم‌های موجود (باید با کلاس‌های CSS شما مطابقت داشته باشد)
 export const themes = {
-    'minimal-sage': { name: 'Sage (پیش‌فرض)', class: 'theme-minimal-sage' },
+    'minimal-sage': { name: 'Sage (پیش‌فرض)', class: null },
     'minimal-sand': { name: 'Sand (شنی)', class: 'theme-minimal-sand' },
-    'dark': { name: 'Dark (تیره)', class: 'theme-dark' }, // تم دارک اضافه شد!
-    // اگر تم دیگری اضافه کردید، اینجا تعریف کنید
+    'dark': { name: 'Dark (تیره)', class: 'theme-dark' }
 }
 
+const STORAGE_KEY = 'landing-theme'
+
 export const useThemeStore = defineStore('theme', () => {
-    // 1. خواندن تم ذخیره شده یا استفاده از پیش‌فرض
-    const savedTheme = localStorage.getItem('app-theme')
+    const savedTheme = localStorage.getItem(STORAGE_KEY)
     const defaultThemeKey = themes[savedTheme] ? savedTheme : 'minimal-sage'
     const currentTheme = ref(defaultThemeKey)
 
-    // متد برای تغییر تم
     function setTheme(themeKey) {
-        if (themes[themeKey]) {
-            currentTheme.value = themeKey
-        } else {
-            console.error(`Theme "${themeKey}" not found!`)
-        }
+        if (themes[themeKey]) currentTheme.value = themeKey
+        else console.error(`Theme "${themeKey}" not found!`)
     }
 
-    // 2. تابع مرکزی برای اعمال کلاس و ذخیره
     function applyThemeClass(themeKey) {
-        if (!themes[themeKey]) return // جلوگیری از خطای احتمالی
+        if (!themes[themeKey]) return
+        const html = document.documentElement
 
+        // حذف کلاس‌های تم قدیمی
+        Object.values(themes)
+            .map(t => t.class)
+            .filter(Boolean)
+            .forEach(c => html.classList.remove(c))
+
+        // Sage بدون کلاس است
         const themeClass = themes[themeKey].class
+        if (themeClass) html.classList.add(themeClass)
 
-        // **مهم:** اعمال کلاس به تگ <html>
-        document.documentElement.className = themeClass
-
-        // ذخیره برای بارهای بعدی
-        localStorage.setItem('app-theme', themeKey)
-        console.log(`Theme set to: ${themeKey} (${themeClass})`)
+        // ذخیره و لاگ
+        localStorage.setItem(STORAGE_KEY, themeKey)
+        if (import.meta.env.DEV) console.log(`Theme applied: ${themeKey}`)
     }
 
-    // 3. Watcher: اعمال تغییرات به محض تغییر State و در زمان راه‌اندازی اولیه
-    watch(currentTheme, (newTheme) => {
-        applyThemeClass(newTheme)
-    }, { immediate: true }) // 'immediate: true' تضمین می‌کند که تم در اولین بارگذاری اعمال شود
+    // Watcher
+    watch(currentTheme, (newTheme) => applyThemeClass(newTheme), { immediate: true })
 
-    return {
-        currentTheme,
-        setTheme,
-        // (اختیاری) اگر خواستید می‌توانید themes را هم برگردانید
-        themes
-    }
+    return { currentTheme, setTheme, themes }
 })

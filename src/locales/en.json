@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "skills": "Skills",
+    "projects": "Projects",
+    "contact": "Contact"
+  },
+  "hero": {
+    "greeting": "Hey there! 👋",
+    "intro": "I’m Ahmad Bakhshian",
+    "role": "Full-stack developer focused on building scalable educational and productivity apps.",
+    "motto": "I love turning complex ideas into simple, delightful experiences.",
+    "cta_projects": "View Projects",
+    "cta_contact": "Contact Me"
+  },
+  "about": {
+    "title": "About Me",
+    "text": "I'm Ahmad — a developer who loves blending system thinking with clean user-centered design. Since 2018, I've been building scalable and maintainable applications with Laravel and Vue, especially in educational, financial, and management platforms.",
+    "years": "Years Experience",
+    "projects": "Successful Projects",
+    "goal": "My goal is to build meaningful and beautiful software.",
+    "skill_backend": "Backend Dev",
+    "skill_frontend": "Frontend Dev",
+    "skill_design": "UI/UX Design"
+
+  },"skills": {
+  "title": "Skills",
+
+  "backend": {
+    "title": "Backend Development",
+    "percent": 80,
+    "items": ["Laravel", "MySQL",  "REST API"]
+  },
+
+  "frontend": {
+    "title": "Frontend Development",
+    "percent": 70,
+    "items": ["Vue.js", "TailwindCSS", "SPA / PWA"]
+  },
+
+  "ux": {
+    "title": "UX / UI Design",
+    "percent": 50,
+    "items": ["User Flow", "Wireframes", "Microinteractions"]
+  },
+
+  "devops": {
+    "title": "DevOps",
+    "percent": 55,
+    "items": ["Docker", "Linux", "CI/CD"]
+  },
+
+  "system": {
+    "title": "System Design",
+    "percent": 65,
+    "items": ["Scalability", "Clean Architecture", "Caching"]
+  },
+
+  "tools": {
+    "title": "Tools & Workflow",
+    "percent": 60,
+    "items": ["Git", "Figma", "Postman"]
+  }
+}
+,"experience": {
+  "title": "Work Experience",
+  "items": [
+    {
+      "role": "FullStack Developer",
+      "company": "PMPiran",
+      "period": "Jul 2022 – Present",
+      "desc": "Building a large-scale modular educational system, integrating Google Shared Calendar, multi-channel notifications, and credit-based payment flows."
+    },
+    {
+      "role": "PHP Developer",
+      "company": "Rayan Andish Sepanta",
+      "period": "Dec 2021 – Jun 2022",
+      "desc": "Developing REST APIs, database optimization, and implementing backend modules for enterprise projects."
+    },
+    {
+      "role": "PHP Developer",
+      "company": "Vafur Mehr Kamyar",
+      "period": "Mar 2021 – Sep 2021",
+      "desc": "Developing service-oriented web applications and maintaining backend systems."
+    },
+    {
+      "role": "PHP Developer",
+      "company": "Pars Fanavaran Mobtaker",
+      "period": "Sep 2020 – Feb 2021",
+      "desc": "Frontend-backend integration and building custom business modules."
+    },
+    {
+      "role": "PHP Developer",
+      "company": "Memaran Fanavari Hoshmand",
+      "period": "Dec 2019 – Sep 2020",
+      "desc": "Backend development for company software and collaboration in multiple web projects."
+    }
+  ]
+},
+
+  "projects": {
+    "title": "Projects",
+    "todo": {
+      "name": "Todo App",
+      "desc": "Personal productivity app with goal reminders and daily progress tracking."
+    },
+    "pmpiran": {
+      "name": "PMPiran CRM",
+      "desc": "Modular educational management system with shared Google Calendar, notifications, and Azkivam credit payment."
+    },
+    "notifications": {
+      "name": "System Notifications",
+      "desc": "Multi-channel notification module (Email, SMS, CRM) with queued jobs and dynamic templates."
+    },
+    "azkivam": {
+      "name": "Azkivam Integration",
+      "desc": "Full Azkivam credit payment gateway integration with secure token lifecycle and transaction tracking."
+    }
+  },
+  "contact": {
+    "title": "Contact Me",
+    "text": "If you’d like to collaborate or just talk about ideas and projects, I’d love to hear from you.",
+    "name": "Name",
+    "email": "Email",
+    "message": "Your Message",
+    "send": "Send Message",
+    "success": "Your message has been sent successfully 🌿",
+    "error": "Something went wrong. Please try again."
+  },
+  "footer": {
+    "text": "© 2025 Ahmad Bakhshian — Built with Laravel, Vue, and a lot of love 💚"
+  }
+}

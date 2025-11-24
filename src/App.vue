@@ -1,37 +1,45 @@
-<script setup>
-import NotificationToast from '@/components/UI/ToastNotification.vue';
-import Header from "./components/Layout/Header.vue";
-import { RouterView, useRoute } from 'vue-router'; // ✅ وارد کردن useRoute
-import { computed } from 'vue'; // ✅ وارد کردن computed
-import { useAuthStore } from '@/stores/auth'; // ✅ نیاز به authStore برای لاگین بودن
-import { useUserSettingStore } from '@/stores/userSetting'
-import { onMounted } from 'vue'
-
-
-const route = useRoute();
-const authStore = useAuthStore();
-onMounted(async () => {
-  const settings = useUserSettingStore()
-
-  if (authStore.isAuthenticated && !settings.loaded) {
-    await settings.load()
-  }
-})
-const shouldShowHeader = computed(() => {
-   return route.meta.requiresAuth || authStore.isAuthenticated;
-});
-
-// 💡 برای ساده‌سازی، می‌توانیم فقط از route.meta.requiresAuth استفاده کنیم:
-// const shouldShowHeader = computed(() => route.meta.requiresAuth);
-</script>
-
 <template>
-  <div id="app" class="min-h-screen bg-[var(--color-background-soft)] text-[var(--color-text)] transition-colors duration-300" dir="rtl">
-<Header v-if="shouldShowHeader" />
-    <main class="container mx-auto p-4 sm:p-6 pb-20">
+  <div
+      id="app"
+      class="min-h-screen text-[var(--color-text)] transition-colors duration-300"
+  >
+    <main class="container mx-auto  sm:p-6 pb-20">
       <RouterView />
     </main>
 
     <NotificationToast />
   </div>
 </template>
+
+<script setup>
+import NotificationToast from '@/components/UI/ToastNotification.vue'
+import { RouterView, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useUserSettingStore } from '@/stores/userSetting'
+import { useI18n } from 'vue-i18n'
+import { onMounted, watch } from 'vue'
+import AOS from 'aos'
+import 'aos/dist/aos.css'
+
+
+const { locale } = useI18n()
+const route = useRoute()
+const authStore = useAuthStore()
+
+
+watch(locale, () => {
+  setTimeout(() => {
+    AOS.refreshHard()
+  }, 50)
+})
+onMounted(async () => {
+  AOS.init({
+    duration: 800,
+    once: true,
+  });
+  const settings = useUserSettingStore()
+  if (authStore.isAuthenticated && !settings.loaded) {
+    await settings.load()
+  }
+})
+</script>

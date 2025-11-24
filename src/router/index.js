@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth" // 💡 مطمئن شوید که م
 import Login from "@/views/Login.vue"
 import Dashboard from "@/views/Dashboard.vue"
 import Register from "@/views/Register.vue"
+import Landing from "@/views/landing/index.vue"
 // Lazy Load کردن NotFound برای بهینه‌سازی (همانطور که قبلاً در 404 استفاده کردیم)
 const NotFound = () => import("@/views/NotFound.vue")
 
@@ -32,6 +33,13 @@ const routes = [
     name: "register",
     component: Register,
     meta: { guest: true },
+  },
+
+  {
+    path: "/landing",
+    name: "landing",
+    component: Landing,
+    meta: { requiresAuth: true }, // نیاز به احراز هویت برای هر چیزی زیر این مسیر
   },
 
   // مسیر اصلی (Dashboard Layout)
