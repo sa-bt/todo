@@ -7,20 +7,13 @@ import BaseCheckbox from '@/components/UI/BaseCheckbox.vue'
 import { useGoalsStore } from '@/stores/goals'
 import { useNotificationStore } from '@/stores/notification'
 
+// ... (آیکون‌ها و سایر import ها بدون تغییر)
+
 const goalsStore = useGoalsStore()
 const notify = useNotificationStore()
 
 // ✅ فهرست اهدافی که می‌تونن والد باشند
 const parentGoals = ref([])
-
-// فرم هدف فعلی
-const form = ref({
-  id: null,
-  title: '',
-  description: '',
-  parent_id: null,
-  tasks_count: 0, // از بک‌اند موقع ویرایش پر میشه
-})
 
 // ---- props & emits ----
 const props = defineProps({
@@ -30,7 +23,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'save'])
 
-// ---- state ----
+// ---- state (به جای form.ref) ----
+// ✅ استفاده مستقیم از ref برای فیلدهای اصلی برای راحتی در تمپلیت
 const title = ref('')
 const description = ref('')
 const priority = ref('medium')
@@ -41,8 +35,9 @@ const reminderTime = ref('09:00')
 const saving = ref(false)
 const showErrors = ref(false)
 const errors = ref({})
+const tasksCountInternal = ref(0) // برای نگهداری tasks_count
 
-// ---- options ----
+// ---- options (بدون تغییر) ----
 const priorityOptions = [
   { value: 'high', label: 'بالا' },
   { value: 'medium', label: 'متوسط' },
@@ -54,47 +49,20 @@ const statusOptions = [
   { value: 'completed', label: 'تکمیل شده' },
 ]
 
-// ---- computed ----
-// ✅ فقط اهداف والد واقعی یا بدون تسک نمایش داده می‌شوند
+// ---- computed (بدون تغییر) ----
 const filteredParentGoals = computed(() => {
   return parentGoals.value
     .filter((g) => !props.editingGoal || g.id !== props.editingGoal.id)
     .map((g) => ({ value: g.id, label: g.title }))
 })
 
-// ✅ اگر هدف تسک دارد، انتخاب والد غیرفعال شود
 const isParentSelectDisabled = computed(() => {
   const g = props.editingGoal
   if (!g) return false
   return g.tasks_count > 0 || g.children_count > 0
 })
 
-// ---- lifecycle ----
-onMounted(async () => {
-  parentGoals.value = await goalsStore.fetchParentableGoals()
-})
-
-watch(
-  () => props.editingGoal,
-  (g) => {
-    if (!g) {
-      resetForm()
-      return
-    }
-    title.value = g.title || ''
-    description.value = g.description || ''
-    priority.value = g.priority || 'medium'
-    status.value = g.status || 'pending'
-    parentId.value = g.parent_id ?? null
-    sendTaskReminder.value = typeof g.send_task_reminder === 'boolean' ? g.send_task_reminder : true
-    reminderTime.value = g.reminder_time ? String(g.reminder_time).slice(0, 5) : '09:00'
-    form.value.tasks_count = g.tasks_count || 0
-    showErrors.value = false
-    errors.value = {}
-  },
-  { immediate: true }
-)
-
+// ---- Form Handlers ----
 function resetForm() {
   title.value = ''
   description.value = ''
@@ -103,10 +71,46 @@ function resetForm() {
   parentId.value = null
   sendTaskReminder.value = true
   reminderTime.value = '09:00'
-  form.value.tasks_count = 0
+  tasksCountInternal.value = 0 // ریست شمارنده
   errors.value = {}
   showErrors.value = false
 }
+
+function fillForm(g) {
+    title.value = g.title || ''
+    description.value = g.description || ''
+    priority.value = g.priority || 'medium'
+    status.value = g.status || 'pending'
+    parentId.value = g.parent_id ?? null
+    sendTaskReminder.value = typeof g.send_task_reminder === 'boolean' ? g.send_task_reminder : true
+    reminderTime.value = g.reminder_time ? String(g.reminder_time).slice(0, 5) : '09:00'
+    tasksCountInternal.value = g.tasks_count || 0
+    showErrors.value = false
+    errors.value = {}
+}
+
+// ---- ✅ منطق اصلی: نظارت بر show و اجرای ریست ----
+watch(
+  () => props.show,
+  (isShowing) => {
+    if (isShowing) {
+      if (props.editingGoal) {
+        // حالت ویرایش: پر کردن با داده‌های ارسالی
+        fillForm(props.editingGoal)
+      } else {
+        // حالت ایجاد جدید: ریست کامل فرم
+        resetForm()
+      }
+    } else {
+        // اختیاری: ریست کردن در زمان بسته شدن برای اطمینان بیشتر
+        resetForm()
+    }
+  }
+)
+// ---- lifecycle ----
+onMounted(async () => {
+  parentGoals.value = await goalsStore.fetchParentableGoals()
+})
 
 // ---- validation ----
 function validate() {
@@ -148,7 +152,7 @@ async function save() {
 </script>
 
 <template>
-  <Teleport to="body">
+<Teleport to="body">
     <transition name="fade-modal">
       <div
         v-if="show"
@@ -158,14 +162,12 @@ async function save() {
         <div
           class="card-bg w-full max-w-lg rounded-2xl border border-token shadow-2xl overflow-hidden text-right"
         >
-          <!-- Header -->
           <header class="sticky top-0 card-bg border-b border-token px-5 py-4">
             <h2 class="text-xl font-extrabold text-[var(--color-heading)]">
-              {{ editingGoal ? 'ویرایش هدف' : 'افزودن هدف جدید' }}
+              {{ props.editingGoal ? 'ویرایش هدف' : 'افزودن هدف جدید' }}
             </h2>
           </header>
 
-          <!-- Body -->
           <section class="px-5 py-4 max-h-[min(75vh,640px)] overflow-y-auto space-y-4">
             <BaseInput
               name="title"
@@ -183,7 +185,6 @@ async function save() {
               placeholder="شرح کوتاه هدف..."
             />
 
-            <!-- انتخاب والد -->
             <div>
               <BaseSelect
                 v-if="!isParentSelectDisabled"
@@ -195,7 +196,7 @@ async function save() {
               />
               <p v-else class="text-xs text-amber-600 mt-2">
                 {{
-                  editingGoal?.children_count > 0
+                  props.editingGoal?.children_count > 0
                     ? 'این هدف دارای اهداف فرزند است و نمی‌تواند والد دیگری داشته باشد.'
                     : 'این هدف دارای تسک است و نمی‌تواند والد داشته باشد.'
                 }}
@@ -230,7 +231,6 @@ async function save() {
             </p>
           </section>
 
-          <!-- Footer -->
           <footer class="sticky bottom-0 card-bg border-t border-token px-5 py-4 flex justify-end gap-2">
             <button
               @click="emit('close')"

@@ -124,7 +124,7 @@ const isLinkActive = (routeName) => route.name === routeName
 </script>
 
 <template>
-  <header class="flex justify-between items-center surface border-b border-token px-6 py-3 shadow-sm sticky top-0 z-40">
+  <header class="flex justify-between items-center surface border-b border-token px-6 py-3 shadow-sm sticky top-0 z-40" dir="rtl">
     <div class="flex items-center gap-3">
       <img src="/pwa-512x512.png" alt="لوگو" class="w-10 h-10 rounded-full border border-token" />
       <RouterLink to="/goals" class="text-lg font-bold text-[var(--color-heading)]">داشبورد اهداف</RouterLink>
@@ -288,7 +288,7 @@ const isLinkActive = (routeName) => route.name === routeName
     </div>
   </header>
 
-  <nav class="hidden md:flex gap-4 surface px-6 py-3 shadow-sm border-b border-token">
+  <nav class="hidden md:flex gap-4 surface px-6 py-3 shadow-sm border-b border-token" dir="rtl">
     <RouterLink
         v-for="link in navigationLinks"
         :key="link.to"

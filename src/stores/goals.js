@@ -86,26 +86,27 @@ export const useGoalsStore = defineStore('goals', {
 
         if (payload.goal_id) {
           const i = this.findGoalIndex(payload.goal_id)
-          if (i !== -1 && res.data.goal) {
-            this.goals[i] = res.data.goal
+          const updatedGoal = res.data.data.goal
+          if (i !== -1 && updatedGoal) {
+            Object.assign(this.goals[i], updatedGoal)
           }
         }
 
-        return res.data
+        return res.data.data
       } catch (err) {
         console.error('addGoalTask error:', err)
         notify.handleApiError(err, 'افزودن تسک ناموفق بود.')
       }
     },
     async fetchParentableGoals() {
-    try {
+      try {
         const res = await api.get('/goals/parentable')
         return res.data.data || []
-    } catch (error) {
+      } catch (error) {
         const notify = useNotificationStore()
         notify.handleApiError(error)
         return []
-    }
-},
+      }
+    },
   },
 })

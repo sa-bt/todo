@@ -14,7 +14,7 @@ const shouldShowHeader = computed(() => {
 <template>
   <Header v-if="shouldShowHeader" />
 
-  <div class="dashboard-container flex-1 w-full">
+  <div class="dashboard-container flex-1 w-full" dir="rtl">
 
     <main class="p-0 sm:p-6 surface-soft">
       <RouterView />

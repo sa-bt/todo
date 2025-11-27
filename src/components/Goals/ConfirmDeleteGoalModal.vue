@@ -21,10 +21,10 @@
           </div>
 
           <!-- Body -->
-          <p class="text-[var(--color-text)]/90 leading-relaxed text-sm sm:text-base mb-8">
+          <p class="text-[var(--color-text)]/90 leading-relaxed text-sm sm:text-base mb-8" dir="rtl">
             آیا واقعاً مطمئن هستی که می‌خواهی این هدف را حذف کنی؟
             <br />
-            <span class="text-[var(--color-secondary)] font-semibold">
+            <span class="text-[var(--color-secondary)] font-semibold" dir="rtl">
               این عمل قابل بازگشت نیست.
             </span>
           </p>

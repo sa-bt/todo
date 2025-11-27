@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[var(--color-background-soft)] px-4">
+  <div class="min-h-screen flex items-center justify-center bg-[var(--color-background-soft)] px-4" dir="rtl">
     <form
         class="w-full max-w-md bg-[var(--color-background)] shadow-xl rounded-2xl p-6 sm:p-8 border border-[var(--color-border)]"
         @submit.prevent="onSubmit"

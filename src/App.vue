@@ -3,7 +3,7 @@
       id="app"
       class="min-h-screen text-[var(--color-text)] transition-colors duration-300"
   >
-    <main class="container mx-auto  sm:p-6 pb-20">
+    <main class=" mx-auto  sm:p-6 pb-20">
       <RouterView />
     </main>
 

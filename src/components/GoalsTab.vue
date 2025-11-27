@@ -44,7 +44,12 @@ async function handleSave(payload) {
   } else {
     await store.addGoal(payload)
   }
-  showModal.value = false
+closeModal(); 
+}
+function closeModal() {
+  showModal.value = false;
+  // ✅ این خط کلیدی است: پس از بسته شدن، مرجع را قطع می‌کند.
+  editingGoal.value = null; 
 }
 
 async function handleDeleteGoal(goalId) {
@@ -138,7 +143,7 @@ async function handleTaskSubmit(payload) {
     <GoalModal
         :show="showModal"
         :editingGoal="editingGoal"
-        @close="showModal = false"
+        @close="closeModal"
         @save="handleSave"
     />
     <AddTaskModal
@@ -146,8 +151,7 @@ async function handleTaskSubmit(payload) {
         :show="showTaskModal"
         :goal="selectedGoal"
         @close="showTaskModal = false"
-        @taskCreated="handleTaskSubmit"
-    />
+@save="handleTaskSubmit"    />
   </div>
 </template>
 

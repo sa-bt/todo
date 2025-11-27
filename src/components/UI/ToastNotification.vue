@@ -60,6 +60,7 @@ onBeforeUnmount(() => {
         aria-live="polite"
         aria-atomic="true"
         :aria-label="store.message"
+        dir="rtl"
     >
 
       <!-- آیکن -->
