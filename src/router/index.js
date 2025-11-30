@@ -50,7 +50,7 @@ const routes = [
     meta: { requiresAuth: true }, // نیاز به احراز هویت برای هر چیزی زیر این مسیر
     children: [
       // ریدایرکت پیش‌فرض: اگر به '/' رفتند، به '/goals' هدایت شوند.
-      { path: "", redirect: { name: "goals" } },
+      { path: "", redirect: { name: "day" } },
 
       // Tabهای ناوبری هدر
       { path: "goals", name: "goals", component: GoalsTab },

@@ -63,7 +63,7 @@ async function handleTaskSubmit(payload) {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 m-3">
     <!-- حالت بارگذاری -->
     <div v-if="store.loading" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="rounded-2xl card-bg border border-token p-6 animate-pulse h-32"></div>
