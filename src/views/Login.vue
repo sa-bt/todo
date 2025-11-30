@@ -141,7 +141,7 @@ const password = ref('')
 const loading = ref(false)
 const hp = ref('') // Honeypot
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8085'
+const API_BASE = import.meta.env.VITE_API_BASE 
 
 /** خطاها */
 const errorMessages = ref([]) // اول errors، اگر نبود message

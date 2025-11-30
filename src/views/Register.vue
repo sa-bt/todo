@@ -237,7 +237,7 @@ import { LoaderCircle, RefreshCw, X, Check } from 'lucide-vue-next'
 const auth = useAuthStore()
 const router = useRouter()
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8085'
+const API_BASE = import.meta.env.VITE_API_BASE 
 
 const name = ref('')
 const email = ref('')
