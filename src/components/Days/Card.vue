@@ -7,11 +7,13 @@ const props = defineProps({
   title: String,
   value: Number,
   icon: String,
+  // این prop برای رنگ آیکون و پروگرس است و باید بماند
   color: { type: String, default: 'blue' },
   progress: Number, // درصد پروگرس کارت
 })
 
-// کلاس‌های رنگی
+// کلاس‌های رنگی Tailwind CSS
+// توجه: اینها برای رنگ‌بندی *آیکون* داخلی هستند و باید با تم هماهنگ باشند
 const colorClasses = {
   blue: { bg: 'bg-blue-100', text: 'text-blue-500', stroke: 'stroke-blue-400' },
   green: { bg: 'bg-green-100', text: 'text-green-500', stroke: 'stroke-green-400' },
@@ -53,11 +55,10 @@ const dashoffset = computed(() =>
 
 <template>
   <div
-    class="bg-white text-gray-800 rounded-2xl p-5 shadow-lg flex flex-col items-center gap-3 transition transform hover:scale-105 hover:shadow-xl relative"
+    class="surface text-[var(--color-text)] rounded-2xl p-5 shadow-lg flex flex-col items-center gap-3 transition transform hover:scale-105 hover:shadow-xl relative border border-token"
+    style="transition-property: transform, box-shadow, background-color, border-color;"
   >
-    <!-- اگر پروگرس داشته باشه -->
     <div v-if="props.progress != null" class="relative flex items-center justify-center w-20 h-20">
-      <!-- دایره پروگرس -->
       <svg class="absolute inset-0 w-full h-full" viewBox="0 0 64 64">
         <circle
           :class="colorClasses[props.color || 'blue'].stroke"
@@ -73,7 +74,6 @@ const dashoffset = computed(() =>
         />
       </svg>
 
-      <!-- آیکن وسط -->
       <div
         class="flex items-center justify-center rounded-full w-12 h-12 animate-bounce-on-change"
         :class="colorClasses[props.color || 'blue'].bg"
@@ -82,7 +82,6 @@ const dashoffset = computed(() =>
       </div>
     </div>
 
-    <!-- اگر پروگرس نداشته باشه -->
     <div
       v-else
       class="p-4 rounded-full flex items-center justify-center animate-bounce-on-change"
@@ -91,9 +90,9 @@ const dashoffset = computed(() =>
       <component :is="IconComp" class="w-8 h-8" :class="colorClasses[props.color || 'blue'].text" />
     </div>
 
-    <p class="text-sm font-medium">{{ props.title }}</p>
-    <h3 class="text-2xl font-bold">{{ toPersianNumber(props.value) }}</h3>
-    <span v-if="props.progress != null" class="text-xs text-gray-500">
+    <p class="text-sm font-medium text-[var(--color-text-secondary)]">{{ props.title }}</p>
+    <h3 class="text-2xl font-bold text-[var(--color-heading)]">{{ toPersianNumber(props.value) }}</h3>
+    <span v-if="props.progress != null" class="text-xs text-[var(--color-text-secondary)]">
       {{ toPersianNumber(Math.round(displayedProgress)) }}٪
     </span>
   </div>

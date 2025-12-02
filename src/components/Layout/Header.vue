@@ -186,7 +186,83 @@ const isLinkActive = (routeName) => route.name === routeName
               role="menu"
               class="absolute left-0 mt-2 w-80 surface rounded-lg border border-token shadow-xl z-50 overflow-hidden will-change-transform"
           >
+            <div class="flex justify-between items-center px-3 py-2 border-b border-token surface-soft">
+              <span class="text-sm font-semibold text-[var(--color-heading)]">اعلان‌ها</span>
+              <div class="flex items-center gap-2">
+                <button
+                    v-if="unreadCount > 0"
+                    @click="markAllRead"
+                    class="text-xs text-[var(--color-primary)] hover:underline focus:ring-2 focus:ring-[var(--color-primary)]/30 rounded px-1 py-0.5 focus:outline-none"
+                    type="button"
+                >
+                  علامت‌گذاری همه خوانده شد
+                </button>
+                <button
+                    @click="notificationsOpen = false"
+                    class="rounded p-1 hover:surface-mute focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none"
+                    type="button"
+                    aria-label="بستن منوی اعلان‌ها"
+                >
+                  <X class="w-4 h-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
+                </button>
+              </div>
             </div>
+
+            <div class="max-h-80 overflow-y-auto">
+              <div v-if="notifLoading" class="px-3 py-6 text-center text-xs text-[var(--color-text-secondary)]">
+                در حال بارگذاری...
+              </div>
+              <div v-else-if="notifError" class="px-3 py-6 text-center text-xs text-red-500">
+                خطا در دریافت اعلان‌ها
+              </div>
+
+              <template v-else-if="notifications.length">
+                <button
+                    v-for="n in notifications"
+                    :key="n.id"
+                    class="w-full text-right flex items-start gap-2 px-3 py-2 text-sm border-b border-token last:border-0 hover:surface-mute transition focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                    :class="!n.read_at ? 'surface-soft font-semibold' : 'text-[var(--color-text)]'"
+                    role="menuitem"
+                    type="button"
+                    @click="onClickNotification(n)"
+                >
+                  <img :src="n.icon || '/icons/notification.png'" alt="" class="w-5 h-5 mt-0.5 rounded" />
+                  <div class="flex-1">
+                    <div class="line-clamp-2">{{ n.title || 'اعلان' }}</div>
+                    <div v-if="n.body" class="text-[11px] text-[var(--color-text-secondary)] mt-0.5 line-clamp-2">
+                      {{ n.body }}
+                    </div>
+                    <div class="text-[10px] text-[var(--color-text-secondary)] mt-1">
+                      {{ new Date(n.time || n.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) }}
+                    </div>
+                  </div>
+                </button>
+
+                <div v-if="nextPageUrl" class="px-3 py-2 text-center">
+                  <button
+                      class="text-xs text-[var(--color-primary)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 rounded px-2 py-1"
+                      @click="loadNextPage"
+                      type="button"
+                  >
+                    نمایش بیشتر
+                  </button>
+                </div>
+              </template>
+
+              <div v-else class="px-3 py-6 text-center text-xs text-[var(--color-text-secondary)]">
+                اعلان جدیدی ندارید.
+              </div>
+            </div>
+
+            <div class="px-3 py-2 text-center text-xs border-t border-token surface-soft">
+              <RouterLink
+                  to="/notifications"
+                  class="text-[var(--color-primary)] font-medium hover:underline focus:ring-2 focus:ring-[var(--color-primary)]/30 rounded px-1 py-0.5 focus:outline-none"
+              >
+                مشاهده همه اعلان‌ها
+              </RouterLink>
+            </div>
+          </div>
         </transition>
       </div>
 
@@ -302,8 +378,7 @@ const isLinkActive = (routeName) => route.name === routeName
         <div class="pt-4 pb-2 border-t border-token bg-[var(--color-background)] sticky bottom-0">
           <div class="flex gap-2 w-full p-2 bg-[var(--color-background-soft)] rounded-lg">
             <button
-              @click="toggleNotifications(); mobileMenuOpen = false"
-              class="flex-1 flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none surface-mute text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:surface-soft relative"
+              @click="router.push('/notifications'); mobileMenuOpen = false; notificationsOpen = false;" class="flex-1 flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none surface-mute text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:surface-soft relative"
               role="menuitem"
               type="button"
             >

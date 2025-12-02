@@ -1,6 +1,8 @@
 <script setup>
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { getTodayShamsi } from '@/utils/jalali'
-import { CirclePlus, CheckCircle, XCircle } from 'lucide-vue-next'
+import { Check, Circle, Plus, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { toPersianNumber } from '@/utils/number' 
 
 const props = defineProps({
   weekDays: { type: Array, required: true },
@@ -8,142 +10,259 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['toggle-task'])
+
 const todayShamsi = getTodayShamsi()
+const expandedDays = ref({}) 
+
+// باز کردن امروز به صورت پیش‌فرض و اسکرول به آن
+onMounted(() => {
+    expandedDays.value[todayShamsi] = true;
+    
+    nextTick(() => {
+        const todayElement = document.querySelector(`.day-card-${todayShamsi}`)
+        if (todayElement) {
+            // اسکرول نرم به بالای کارت روز جاری
+            todayElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    })
+})
 
 function toggleTask(taskRow, day) {
   emit('toggle-task', { taskRow, day })
 }
+
+// تابع کمکی برای محاسبه درصد
+function calculatePercentage(completed, total) {
+    if (total === 0) return 0; // اگر تسکی تعریف نشده باشد، 0٪
+    return Math.round((completed / total) * 100);
+}
+
+// تعداد کل تسک‌های تعریف شده برای یک روز
+function getDayTaskCount(dayDate) {
+    return props.tasksRows.filter(row => row.weekTasks[dayDate]).length;
+}
+
+// تعداد تسک‌های تکمیل شده برای یک روز
+function getDayCompletedCount(dayDate) {
+    return props.tasksRows.filter(row => row.weekTasks[dayDate]?.is_done).length;
+}
+
+// محاسبه Progress برای روز (استفاده در Progress Bar روزانه)
+function getDayProgress(dayDate) {
+    const completed = getDayCompletedCount(dayDate);
+    const total = getDayTaskCount(dayDate);
+    return calculatePercentage(completed, total);
+}
+
+function getCardClasses(task) {
+  const baseClasses = 'shadow-sm hover:shadow-md transition-all duration-300'
+  
+  if (!task) {
+    return `${baseClasses} bg-surface-soft border border-dashed border-token/60 hover:bg-surface-accent/10`
+  }
+  
+  if (task.is_done) {
+    return `${baseClasses} bg-green-50 dark:bg-green-800/40 border border-green-200/50 hover:border-green-400/50`
+  } else {
+    return `${baseClasses} bg-yellow-50 dark:bg-yellow-800/40 border border-yellow-200/50 hover:border-yellow-400/50`
+  }
+}
+
+const TaskIcon = (task) => {
+  if (!task) return Plus
+  return task.is_done ? Check : Circle
+}
+
+function toggleDayExpansion(dayDate) {
+    expandedDays.value[dayDate] = !expandedDays.value[dayDate]
+}
 </script>
 
 <template>
-  <div class="overflow-x-auto snap-x snap-mandatory overscroll-x-contain py-5"
-       style="-webkit-overflow-scrolling:touch;scrollbar-gutter:stable both-edges;">
-    <!-- Legend -->
-    <div class="hidden sm:flex flex-wrap items-center gap-3 mb-3 text-sm">
-      <span class="inline-flex items-center gap-2 px-2 py-1 rounded border border-[var(--color-border)] bg-yellow-50 text-[var(--color-text-secondary)]">
-        <span class="w-3 h-3 rounded bg-yellow-300/60"></span>
-        ثبت‌شده (انجام‌نشده)
-      </span>
-      <span class="inline-flex items-center gap-2 px-2 py-1 rounded border border-dashed border-[var(--color-border)]">
-        <span class="w-3 h-3 rounded border border-dashed border-[var(--color-border)]"></span>
-        تعریف‌نشده
-      </span>
-      <span class="inline-flex items-center gap-2 px-2 py-1 rounded border border-[var(--color-border)] bg-green-50 text-[var(--color-text-secondary)]">
-        <span class="w-3 h-3 rounded bg-green-400"></span>
-        انجام‌شده
-      </span>
+  <div class="overflow-x-auto rounded-xl">
+    
+    <div class="hidden sm:block">
+        <div class="min-w-full flex flex-col divide-y divide-token">
+            
+            <div class="grid grid-cols-[250px_repeat(7,1fr)] bg-surface-soft sticky top-0 z-20 shadow-lg px-2 pt-4 pb-2">
+                <div class="text-right text-sm font-bold text-[var(--color-heading)] px-3 py-1">اهداف هفته</div>
+                
+                <div
+                v-for="day in weekDays"
+                :key="day.date"
+                class="text-center text-xs font-bold text-[var(--color-text-secondary)] tracking-wider px-1"
+                :class="{ 'text-[var(--color-accent)]': day.date === todayShamsi }"
+                >
+                <span class="text-lg">{{ day.label }}</span>
+                <div class="text-[10px] font-normal opacity-70 mb-2">{{ day.date.slice(5) }}</div>
+                
+                <div class="mt-1 w-full flex items-center gap-1.5 px-1">
+                    <div class="w-full bg-surface-soft rounded-full h-2">
+                        <div
+                            class="h-2 rounded-full transition-all duration-500"
+                            :style="{ width: getDayProgress(day.date) + '%' }"
+                            :class="getDayProgress(day.date) === 100 ? 'bg-green-500 shadow-green-400/50 shadow-md' : 'bg-[var(--color-accent)] shadow-[var(--color-accent)]/50 shadow-md'"
+                        ></div>
+                    </div>
+                    <span class="text-[10px] text-[var(--color-text-secondary)] font-mono flex-shrink-0">{{ toPersianNumber(getDayProgress(day.date)) }}٪</span>
+                </div>
+                </div>
+            </div>
+
+            <div 
+                v-for="row in tasksRows" 
+                :key="row.goal_id" 
+                class="py-4 border-b border-token/50"
+            >
+                <div class="grid grid-cols-[250px_repeat(7,1fr)] gap-3 items-start">
+                    
+                    <div class="px-3 text-sm font-medium text-[var(--color-heading)] sticky left-0 z-10 bg-surface flex items-center h-full">
+                        <span class="truncate">{{ row.goal_title }}</span>
+                    </div>
+
+                    <div
+                        v-for="day in weekDays"
+                        :key="day.date"
+                        class="rounded-xl relative flex items-center justify-center p-1.5 sm:p-2 cursor-pointer tap-target"
+                        :class="[
+                            getCardClasses(row.weekTasks[day.date]),
+                            { 'ring-2 ring-[var(--color-accent)]/50': day.date === todayShamsi } 
+                        ]"
+                        @click="toggleTask(row, day.date)"
+                        role="button"
+                        tabindex="0"
+                    >
+                        <component 
+                            :is="TaskIcon(row.weekTasks[day.date])" 
+                            :class="[
+                                'w-6 h-6 task-bounce',
+                                row.weekTasks[day.date] && row.weekTasks[day.date].is_done 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : (row.weekTasks[day.date]
+                                        ? 'text-yellow-600 dark:text-yellow-400'
+                                        : 'text-[var(--color-text-secondary)] opacity-60')
+                            ]"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div
-        class="grid grid-cols-[200px_repeat(7,1fr)] gap-x-2 gap-y-1 text-[var(--color-text)]"
-        role="grid"
-        aria-label="جدول تسک‌های هفتگی"
-    >
-      <!-- هدر ستون عنوان -->
-      <div
-          class="font-bold text-right p-2 rounded-lg bg-[var(--color-background-soft)] border border-[var(--color-border)]
-               sticky top-0 z-20 shadow-sm backdrop-blur snap-start"
-          role="columnheader"
-      >
-        تسک‌ها
-      </div>
-
-      <!-- هدر روزها -->
-      <div
-          v-for="day in weekDays"
-          :key="day.date"
-          class="text-center font-bold rounded-lg p-2 border bg-[var(--color-background-soft)] border-[var(--color-border)]
-               sticky top-0 z-20 shadow-sm backdrop-blur snap-start"
-          :class="day.date === todayShamsi
-          ? 'border-x-2 border-[var(--color-accent)] text-[var(--color-accent)] shadow-md shadow-[var(--color-accent)]/10'
-          : ''"
-          role="columnheader"
-      >
-        {{ day.label }}
-        <div class="text-xs text-[var(--color-text-secondary)]">{{ day.date }}</div>
-        <div v-if="day.date === todayShamsi" class="mt-1 text-[10px] font-normal text-[var(--color-accent)]">امروز</div>
-      </div>
-
-      <!-- ردیف‌ها -->
-      <template v-for="task in tasksRows" :key="task.goal_id">
-        <!-- ستون عنوان هدف -->
-        <div
-            class="p-2 text-right font-medium rounded-md bg-[var(--color-background-soft)] border border-[var(--color-border)]
-                 sticky right-0 z-10 shadow-sm relative snap-start
-                 after:absolute after:inset-y-0 after:-left-2 after:w-2 after:bg-gradient-to-l after:from-[var(--color-background)]/70 after:to-transparent"
-            role="rowheader"
-            :title="task.goal_title"
+    <div class="sm:hidden mt-2 divide-y divide-token/50">
+        
+        <div 
+            v-for="day in weekDays" 
+            :key="day.date" 
+            class="surface rounded-lg shadow-md mb-3 overflow-hidden border border-token"
+            :class="`day-card-${day.date}`"
         >
-          {{ task.goal_title }}
-        </div>
+            <button 
+                @click="toggleDayExpansion(day.date)"
+                class="w-full p-3 flex justify-between items-center text-right tap-target"
+                :class="{ 
+                    'bg-[var(--color-accent)]/10 text-[var(--color-accent)]': day.date === todayShamsi 
+                }"
+            >
+                <div class="flex flex-col items-start w-full">
+                    <span class="font-bold text-xl" 
+                        :class="day.date === todayShamsi ? 'text-[var(--color-accent)]' : 'text-[var(--color-heading)]'"
+                    >
+                        {{ day.label }}
+                        <span class="text-sm font-normal opacity-70 mr-2">{{ day.date.slice(5) }}</span>
+                    </span>
+                    
+                    <div class="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
+                        {{ toPersianNumber(getDayCompletedCount(day.date)) }} از {{ toPersianNumber(getDayTaskCount(day.date)) }} تسک انجام شد
+                    </div>
 
-        <!-- سلول‌های روز -->
-        <div
-            v-for="day in weekDays"
-            :key="day.date"
-            class="group relative rounded-xl border transition hover:shadow-sm focus-within:ring-2 focus-within:ring-[var(--color-accent)] snap-start"
-            role="gridcell"
-            :aria-label="`${task.goal_title} — ${day.label}`"
-            :class="[
-            day.date === todayShamsi
-              ? 'border-x-2 border-[var(--color-accent)] shadow-md shadow-[var(--color-accent)]/10'
-              : '',
-            task.weekTasks[day.date]?.is_done
-              ? 'bg-green-50 border-green-200'
-              : (task.weekTasks[day.date]
-                  ? 'bg-yellow-50 border-yellow-300'
-                  : 'bg-white border-dashed border-[var(--color-border)]')
-          ]"
-        >
-          <button
-              type="button"
-              class="w-full h-full min-h-10 flex items-center justify-center tap-target outline-none py-1.5 sm:py-2"
-              :aria-label="`تغییر وضعیت ${task.goal_title} در ${day.label}`"
-              :aria-pressed="task.weekTasks[day.date]?.is_done ? 'true' : 'false'"
-              @click="toggleTask(task, day.date)"
-              @keydown.enter.prevent="toggleTask(task, day.date)"
-              @keydown.space.prevent="toggleTask(task, day.date)"
-          >
-            <CheckCircle
-                v-if="task.weekTasks[day.date]?.is_done"
-                class="w-5 h-5 sm:w-6 sm:h-6 task-bounce text-green-600"
-            />
-            <XCircle
-                v-else-if="task.weekTasks[day.date]"
-                class="w-5 h-5 sm:w-6 sm:h-6 task-bounce text-red-500"
-            />
-            <CirclePlus
-                v-else
-                class="w-5 h-5 sm:w-6 sm:h-6 task-bounce text-indigo-400 opacity-90 group-hover:opacity-100"
-            />
-          </button>
-
-          <!-- Tooltip سفارشی -->
-          <span
-              class="pointer-events-none whitespace-nowrap px-2 py-1 text-xs rounded-md
-                   bg-[var(--color-heading)] text-white/95 shadow-sm
-                   absolute bottom-full mb-2 left-1/2 -translate-x-1/2
-                   opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
-                   transition-opacity duration-150 z-30"
-          >
-            {{
-              task.weekTasks[day.date]?.is_done
-                  ? 'انجام‌شده'
-                  : (task.weekTasks[day.date] ? 'ثبت‌شده (انجام‌نشده)' : 'افزودن تسک')
-            }}
-          </span>
+                    <div class="mt-2 w-full flex items-center gap-1.5 pr-2">
+                        <div class="w-full bg-surface-soft rounded-full h-2">
+                            <div
+                                class="h-2 rounded-full transition-all duration-500"
+                                :style="{ width: getDayProgress(day.date) + '%' }"
+                                :class="getDayProgress(day.date) === 100 ? 'bg-green-500 shadow-green-400/50 shadow-md' : 'bg-[var(--color-accent)] shadow-[var(--color-accent)]/50 shadow-md'"
+                            ></div>
+                        </div>
+                        <span class="text-xs text-[var(--color-text-secondary)] font-mono flex-shrink-0">{{ toPersianNumber(getDayProgress(day.date)) }}٪</span>
+                    </div>
+                </div>
+                
+                <component 
+                    :is="expandedDays[day.date] ? ChevronUp : ChevronDown" 
+                    class="w-6 h-6 flex-shrink-0" 
+                    :class="day.date === todayShamsi ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'"
+                />
+            </button>
+            
+            <Transition name="fade-slide">
+                <div v-if="expandedDays[day.date]" class="p-3 border-t border-token/50 bg-surface-soft">
+                    <div 
+                        v-for="row in tasksRows"
+                        :key="row.goal_id"
+                        class="flex items-center justify-between py-3 border-b border-token/30 last:border-b-0 tap-target"
+                        @click="toggleTask(row, day.date)"
+                    >
+                        <div class="flex flex-col items-start w-full">
+                            <span class="text-sm font-medium text-[var(--color-heading)]">
+                                {{ row.goal_title }}
+                            </span>
+                            <span v-if="row.weekTasks[day.date]" class="text-[10px] text-[var(--color-text-secondary)] mt-1">
+                                وضعیت: {{ row.weekTasks[day.date]?.is_done ? 'انجام شد' : 'منتظر' }}
+                            </span>
+                        </div>
+                        
+                        <component 
+                            :is="TaskIcon(row.weekTasks[day.date])" 
+                            class="w-6 h-6 flex-shrink-0"
+                            :class="[
+                                row.weekTasks[day.date] && row.weekTasks[day.date].is_done 
+                                    ? 'text-green-600' 
+                                    : (row.weekTasks[day.date]
+                                        ? 'text-yellow-600'
+                                        : 'text-indigo-400 opacity-60') 
+                            ]"
+                        />
+                    </div>
+                </div>
+            </Transition>
         </div>
-      </template>
     </div>
+
   </div>
 </template>
 
 <style scoped>
+/* انیمیشن پالس برای بازخورد بصری بهتر */
 @keyframes bounceScale {
   0%, 100% { transform: scale(1); }
   50%      { transform: scale(1.12); }
 }
 .task-bounce {
   animation: bounceScale 0.2s ease-out;
+}
+
+/* استایل‌های انیمیشن Collapsible در موبایل */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease-in-out;
+  max-height: 500px; 
+  opacity: 1;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* استایل Sticky برای دسکتاپ */
+.sticky.left-0 {
+    background-color: var(--color-background); 
+    box-shadow: 2px 0 5px -2px var(--color-shadow);
 }
 </style>
