@@ -2,11 +2,77 @@
    Service Worker for Todo WebPush Notifications (RTL)
    ======================================================= */
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+// 🌟 بخش جدید: تعریف نام کش و لیست فایل‌های اپلیکیشن (Assets)
+// ⚠️ نکته مهم: با هر بیلد (Build) جدید این مقدار را عوض کن (مثلاً 1.0.2، 1.0.3 و...)
+const CACHE_STATIC_ASSETS = 'todo-app-assets-v1.0.2';
+
+// ⚠️ این لیست را بر اساس فایل‌های خروجی بیلد خود تکمیل کنید.
+const urlsToCache = [
+  '/', 
+  '/index.html', 
+  '/icons/notification.png',
+  // اگر فایل‌های JS/CSS شما Hash ندارند، باید اینجا لیست شوند:
+  // '/assets/main.css', 
+  // '/assets/fonts-shabnam.css',
+  // '/js/main.js', // یا هر فایلی که خروجی بیلد است
+];
+
+// =======================================================
+
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    
+    // کش کردن فایل‌های استاتیک اپلیکیشن
+    event.waitUntil(
+        caches.open(CACHE_STATIC_ASSETS)
+            .then((cache) => {
+                console.log('Opened cache for static assets');
+                // اگر فایلی یافت نشود، کل فرآیند نصب با خطا مواجه نمی‌شود.
+                return cache.addAll(urlsToCache).catch((err) => {
+                    console.warn('Failed to cache some assets (this may be normal if assets are hash-named):', err);
+                });
+            })
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    // 🌟 بخش جدید: حذف کش‌های قدیمی (Cache Busting)
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    // فقط کش‌هایی که با نام فعلی ما مطابقت ندارند را حذف کن.
+                    if (cacheName !== CACHE_STATIC_ASSETS && cacheName.startsWith('todo-app-assets-')) {
+                        console.log('Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+        // گرفتن کنترل صفحه بلافاصله پس از فعال‌سازی
+        .then(() => self.clients.claim()) 
+    );
+});
 
 /**
- * Push event handler
+ * Fetch event handler - برای برگرداندن محتوا از کش یا شبکه
+ */
+self.addEventListener('fetch', (event) => {
+    // استراتژی Cache First - ابتدا کش، اگر نبود شبکه
+    event.respondWith(
+        caches.match(event.request)
+            .then((response) => {
+                if (response) {
+                    return response;
+                }
+                return fetch(event.request);
+            })
+    );
+});
+
+
+/**
+ * Push event handler - مدیریت اعلان‌های دریافتی
  */
 self.addEventListener('push', (event) => {
   let payload = {};
@@ -20,8 +86,7 @@ self.addEventListener('push', (event) => {
   const body = payload.body || 'مشاهده کنید';
   const url = payload.url || (payload.data && payload.data.url) || '/';
 
-  // 🔹 اضافه کردن جهت راست‌به‌چپ در همین‌جا (نه در بک‌اند)
-  // U+202B → شروع راست‌به‌چپ  |  U+202C → پایان راست‌به‌چپ
+  // 🔹 اضافه کردن جهت راست‌به‌چپ
   const rtlBody = '\u202B' + body + '\u202C';
   const rtlTitle = '\u202B' + title + '\u202C';
 
@@ -39,14 +104,13 @@ self.addEventListener('push', (event) => {
     requireInteraction: false
   };
 
-  // نمایش نوتیف
   event.waitUntil(
     self.registration.showNotification(rtlTitle, options)
   );
 });
 
 /**
- * Click event handler
+ * Click event handler - مدیریت کلیک روی اعلان
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
@@ -59,7 +123,6 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  // کلیک ساده روی نوتیف
   event.waitUntil(openOrFocus(url));
 });
 
@@ -72,12 +135,10 @@ async function openOrFocus(url) {
     includeUncontrolled: true,
   });
   for (const client of allClients) {
-    // اگر تب فعلاً بازه، فقط فوکوس کن
-    if (client.url === url && 'focus' in client) {
+    if (client.url.includes(url) && 'focus' in client) { // 👈 تغییر برای URLهای شامل path
       return client.focus();
     }
   }
-  // در غیر این صورت تب جدید باز کن
   if (clients.openWindow) {
     return clients.openWindow(url);
   }
@@ -91,9 +152,9 @@ self.addEventListener('pushsubscriptionchange', async (event) => {
     const reg = await self.registration;
     const newSub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: null, // TODO: add VAPID public key if needed
+      applicationServerKey: null, // VAPID public key
     });
-    // اینجا می‌تونی newSub رو با fetch به بک‌اند POST کنی تا endpoint جدید ذخیره بشه
+    // TODO: اینجا newSub رو با fetch به بک‌اند POST کنی
   } catch (e) {
     console.error('Push subscription change error:', e);
   }
