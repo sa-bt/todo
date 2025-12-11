@@ -280,7 +280,14 @@ async function onSubmit () {
     const data = await res.json()
     clearErrors()
     auth.setAuth({ user: data.data.user, token: data.data.token })
-    router.push({ name: 'goals' })
+    
+    // 💡 منطق هدایت شرطی بر اساس نقش
+    if (auth.isAdmin) {
+      router.push({ name: 'admin' }) // هدایت به داشبورد ادمین
+    } else {
+      router.push({ name: 'day' }) // 👈 کاربر عادی به 'day'
+    }
+    
   } catch (e) {
     applyErrors({ messages: [e?.message || 'خطای نامشخص رخ داد.'] })
     await fetchCaptcha()

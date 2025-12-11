@@ -3,7 +3,8 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import {
   Home, Calendar, CalendarDays, CalendarRange, CalendarClock,
-  Menu, Bell, X, Settings, LogOut 
+  Menu, Bell, X, Settings, LogOut, 
+  Shield // 🌟 آیکون جدید: برای لینک ادمین
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { getTodayShamsi } from '@/utils/jalali'
@@ -17,7 +18,7 @@ const weekdayName = computed(() => {
 })
 const router = useRouter()
 const route  = useRoute()
-const auth   = useAuthStore()
+const auth   = useAuthStore() // 💡 Store احراز هویت
 
 const shamsiDate = getTodayShamsi()
 const mobileMenuOpen   = ref(false)
@@ -114,15 +115,30 @@ onBeforeUnmount(() => {
   sysNotifs.stopUnreadPolling()
 })
 
-// ناوبری بالا (ترتیب جدید)
-const navigationLinks = [
-  { to: '/day',   label: 'نمای روزانه',  icon: CalendarClock, routeName: 'day'   },
-  { to: '/week',  label: 'نمای هفتگی',   icon: CalendarDays,  routeName: 'week'  },
-  { to: '/month', label: 'نمای ماهانه',  icon: CalendarRange, routeName: 'month' },
-  { to: '/year',  label: 'نمای سالانه',  icon: Calendar,      routeName: 'year'  },
-  { to: '/goals', label: 'اهداف',        icon: Home,          routeName: 'goals' },
-  { to: '/settings', label: 'تنظیمات',   icon: Settings,      routeName: 'settings' }
-]
+// 🌟 ناوبری بالا (تبدیل به computed برای افزودن لینک ادمین)
+const navigationLinks = computed(() => {
+    const links = [
+      { to: '/day',   label: 'نمای روزانه',  icon: CalendarClock, routeName: 'day'   },
+      { to: '/week',  label: 'نمای هفتگی',   icon: CalendarDays,  routeName: 'week'  },
+      { to: '/month', label: 'نمای ماهانه',  icon: CalendarRange, routeName: 'month' },
+      { to: '/year',  label: 'نمای سالانه',  icon: Calendar,      routeName: 'year'  },
+      { to: '/goals', label: 'اهداف',        icon: Home,          routeName: 'goals' },
+      { to: '/settings', label: 'تنظیمات',   icon: Settings,      routeName: 'settings' }
+    ];
+
+    // 💡 اگر کاربر ادمین است، لینک پنل مدیریت را اضافه کن
+    if (auth.isAdmin) {
+      links.push({
+        to: '/admin',
+        label: 'پنل مدیریت',
+        icon: Shield,
+        routeName: 'admin'
+      });
+    }
+
+    return links;
+});
+
 const isLinkActive = (routeName) => route.name === routeName
 </script>
 

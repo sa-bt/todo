@@ -1,16 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router"
-import { useAuthStore } from "@/stores/auth" // 💡 مطمئن شوید که مسیر store درست است
+import { useAuthStore } from "@/stores/auth" 
 
 // --- 1. کامپوننت‌های Views ---
 import Login from "@/views/Login.vue"
 import Dashboard from "@/views/Dashboard.vue"
 import Register from "@/views/Register.vue"
 import Landing from "@/views/landing/index.vue"
-// Lazy Load کردن NotFound برای بهینه‌سازی (همانطور که قبلاً در 404 استفاده کردیم)
+
+// 🌟 وارد کردن کامپوننت جدید برای دوره ها
+import AdminDashboardLayout from "@/views/admin/Dashboard.vue" 
+import AdminReports from "@/views/admin/Reports.vue"         
+import CourseList from "@/views/admin/CourseList.vue"         
+import CourseDetail from "@/views/admin/Course.vue"         
+
 const NotFound = () => import("@/views/NotFound.vue")
 
 // --- 2. کامپوننت‌های Tabهای Dashboard ---
-// 💡 معمولاً بهتر است این Tabها را هم Lazy Load کنید، اما برای سادگی فعلاً Import می‌شوند.
 import GoalsTab from "@/components/GoalsTab.vue"
 import YearTab from "@/components/YearTab.vue"
 import WeekTab from "@/components/WeekTab.vue"
@@ -25,7 +30,7 @@ const routes = [
     path: "/login",
     name: "login",
     component: Login,
-    meta: { guest: true }, // فقط برای کاربرانی که لاگین نیستند
+    meta: { guest: true }, 
   },
 
   {
@@ -39,20 +44,51 @@ const routes = [
     path: "/landing",
     name: "landing",
     component: Landing,
-    meta: { requiresAuth: true }, // نیاز به احراز هویت برای هر چیزی زیر این مسیر
+    meta: { requiresAuth: true }, 
   },
+
+  // مسیرهای جدید ادمین
+  {
+    path: "/admin",
+    name: "admin",
+    component: AdminDashboardLayout, 
+    meta: { requiresAuth: true, requiresAdmin: true }, 
+    children: [
+      {
+        path: "",
+        name: "adminSummary", 
+        component: { template: '<div class="p-4">خلاصه وضعیت فعلی سیستم (مثلاً نمودارهای کلیدی)</div>' },
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "reports",
+        name: "adminReports",
+        component: AdminReports,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "courses",
+        name: "adminCoursesList",
+        component: CourseList,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+            path: 'course/:slug', 
+            name: 'adminCourseDetail', // 👈 نامی که در RouterLink استفاده شده است
+            component: CourseDetail, // 👈 کامپوننتی که جزئیات دوره را نمایش می‌دهد
+        },
+    ]
+  },
+
 
   // مسیر اصلی (Dashboard Layout)
   {
     path: "/",
     component: Dashboard,
-    // 💡 نام والد (dashboard) فقط به عنوان یک Layout/View استفاده می‌شود
-    meta: { requiresAuth: true }, // نیاز به احراز هویت برای هر چیزی زیر این مسیر
+    meta: { requiresAuth: true }, 
     children: [
-      // ریدایرکت پیش‌فرض: اگر به '/' رفتند، به '/goals' هدایت شوند.
       { path: "", redirect: { name: "day" } },
 
-      // Tabهای ناوبری هدر
       { path: "goals", name: "goals", component: GoalsTab },
       { path: "year", name: "year", component: YearTab },
       { path: "week", name: "week", component: WeekTab },
@@ -64,9 +100,9 @@ const routes = [
 
   },
 
-  // مسیر 404 (باید در انتهای آرایه باشد)
+  // مسیر 404
   {
-    path: '/:catchAll(.*)*', // ✅ سینتکس جدید Vue Router برای catch-all
+    path: '/:catchAll(.*)*', 
     name: 'NotFound',
     component: NotFound
   },
@@ -75,7 +111,6 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  // 💡 اضافه کردن scrollBehavior برای تجربه بهتر کاربر
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
@@ -85,21 +120,25 @@ const router = createRouter({
   },
 })
 
-// 🔥 Router Guard برای مدیریت احراز هویت و دسترسی
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
 
-  // 1. اگر نیاز به احراز هویت بود و کاربر لاگین نبود → به Login هدایت کن
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return next({ name: "login" })
   }
 
-  // 2. اگر مسیر فقط برای مهمان بود و کاربر لاگین بود → به اهداف هدایت کن
-  if (to.meta.guest && auth.isAuthenticated) {
-    return next({ name: "goals" })
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    console.warn(`Access Denied for user ${auth.user?.name} (Role: ${auth.user?.role}) attempting to access ${to.path}`);
+    return next({ name: "goals" }) 
   }
 
-  // 3. در غیر این صورت، اجازه دسترسی بده
+  if (to.meta.guest && auth.isAuthenticated) {
+    if (auth.isAdmin) {
+      return next({ name: "admin" })
+    }
+    return next({ name: "day" })
+  }
+
   return next()
 })
 

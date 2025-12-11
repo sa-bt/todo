@@ -10,7 +10,6 @@ const CACHE_STATIC_ASSETS = 'todo-app-assets-v1.0.2';
 const urlsToCache = [
   '/', 
   '/index.html', 
-  '/icons/notification.png',
   // اگر فایل‌های JS/CSS شما Hash ندارند، باید اینجا لیست شوند:
   // '/assets/main.css', 
   // '/assets/fonts-shabnam.css',
@@ -92,8 +91,6 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: rtlBody,
-    icon: payload.icon || '/icons/notification.png',
-    badge: payload.badge || '/icons/notification.png',
     vibrate: [100, 50, 100],
     data: { url },
     dir: 'rtl',
