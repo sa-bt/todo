@@ -8,12 +8,23 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 💡 بخش تزریق Hash: برای Cache Busting اتوماتیک Service Worker
+  define: {
+    'self.BUILD_HASH': JSON.stringify(Date.now().toString()), 
+  },
+  
   plugins: [
     vue(),
     vueDevTools(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate', 
+      // ⚠️ تغییر حیاتی: استفاده از injectManifest برای Service Worker سفارشی
+      registerType: 'injectManifest', 
+      
+      // 💡 مسیر دهی به فایل Service Worker سفارشی شما
+      srcDir: 'public', // فرض بر این است که فایل اصلی شما در public قرار دارد
+      filename: 'sw.js', // ✅ اصلاح نام فایل Service Worker
+      
       manifest: {
         name: 'NPM Todo',
         short_name: 'Todo',

@@ -25,29 +25,38 @@ app.use(createPinia())
 app.use(i18n)
 app.use(router)
 
-// 💡 نکته: اپلیکیشن را قبل از ثبت Service Worker Mount کن
 app.mount('#app')
 
-// 🌟 بخش بهبود یافته: ثبت Service Worker و مدیریت به‌روزرسانی
+// 🌟 بخش به‌روزرسانی‌شده: ثبت Service Worker، مدیریت به‌روزرسانی و ثبت Web Push
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js', { scope: '/' }) // 👈 تعریف scope
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
 
     .then(registration => {
       console.log('✅ Service Worker registered with scope:', registration.scope)
 
-      // 🌟 اضافه کردن منطق پیگیری به‌روزرسانی برای PWA
+      // 💡 مرحله ۱: ذخیره registration (اختیاری، اما مفید)
+      app.config.globalProperties.$swRegistration = registration;
+      
+      // 💡 مرحله ۲: فراخوانی registerWebPush پس از اطمینان از ثبت Worker
+      // (registerWebPush باید شیء registration را به عنوان پارامتر بپذیرد)
+      registerWebPush(registration);
+
+      // 🌟 اضافه کردن منطق پیگیری به‌روزرسانی (UpdateFound)
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing
         
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // یعنی نسخه جدید دانلود شده و آماده فعال‌سازی است.
-                console.log('🔄 New content available. User must close all tabs or refresh twice.');
                 
-                // 💡 پیشنهاد: یک Toast یا Modal به کاربر نشان بدهید که "بروزرسانی جدید در دسترس است. برای فعال‌سازی رفرش کنید."
-                // برای فعال‌سازی فوری بدون بستن تب:
-                // newWorker.postMessage({ action: 'skipWaiting' });
+                // 💡 به جای confirm()، ارسال Custom Event به UI (کامپوننت‌های Vue)
+                console.log('🔄 New content ready to be activated. Dispatching event to UI...');
+                
+                // ایجاد یک رویداد سفارشی برای اطلاع‌رسانی به UI
+                const event = new CustomEvent('swUpdateAvailable', {
+                    detail: { newWorker: newWorker } // ارجاع به New Worker را برای فعال‌سازی حمل می‌کنیم
+                });
+                window.dispatchEvent(event);
             }
           })
         }
@@ -57,5 +66,3 @@ if ('serviceWorker' in navigator) {
       console.error('❌ Service Worker registration failed:', error)
     })
 }
-
-registerWebPush()

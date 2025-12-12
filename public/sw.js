@@ -2,31 +2,31 @@
    Service Worker for Todo WebPush Notifications (RTL)
    ======================================================= */
 
-// 🌟 بخش جدید: تعریف نام کش و لیست فایل‌های اپلیکیشن (Assets)
-// ⚠️ نکته مهم: با هر بیلد (Build) جدید این مقدار را عوض کن (مثلاً 1.0.2، 1.0.3 و...)
-const CACHE_STATIC_ASSETS = 'todo-app-assets-v1.0.2';
+// 🌟 بخش اصلاح شده: استفاده از BUILD_HASH تزریقی از Vite
+// اگر BUILD_HASH توسط ابزار بیلد تزریق نشد، از یک مقدار پیش‌فرض استفاده کند.
+const BUILD_HASH = self.BUILD_HASH || Date.now(); 
+
+// 💡 نام کش اکنون شامل Hash بیلد است تا Cache Busting خودکار انجام شود.
+const CACHE_STATIC_ASSETS = 'todo-app-assets-v' + BUILD_HASH;
 
 // ⚠️ این لیست را بر اساس فایل‌های خروجی بیلد خود تکمیل کنید.
 const urlsToCache = [
   '/', 
   '/index.html', 
-  // اگر فایل‌های JS/CSS شما Hash ندارند، باید اینجا لیست شوند:
-  // '/assets/main.css', 
-  // '/assets/fonts-shabnam.css',
-  // '/js/main.js', // یا هر فایلی که خروجی بیلد است
+  // فایل‌های مهم JS/CSS خود را اینجا لیست کنید.
 ];
 
 // =======================================================
 
 self.addEventListener('install', (event) => {
+    // 💡 مهم: skipWaiting در اینجا باعث می‌شود Worker جدید بلافاصله کنترل صفحه را بگیرد.
     self.skipWaiting();
     
     // کش کردن فایل‌های استاتیک اپلیکیشن
     event.waitUntil(
         caches.open(CACHE_STATIC_ASSETS)
             .then((cache) => {
-                console.log('Opened cache for static assets');
-                // اگر فایلی یافت نشود، کل فرآیند نصب با خطا مواجه نمی‌شود.
+                console.log('Opened cache for static assets:', CACHE_STATIC_ASSETS);
                 return cache.addAll(urlsToCache).catch((err) => {
                     console.warn('Failed to cache some assets (this may be normal if assets are hash-named):', err);
                 });
@@ -40,15 +40,15 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    // فقط کش‌هایی که با نام فعلی ما مطابقت ندارند را حذف کن.
-                    if (cacheName !== CACHE_STATIC_ASSETS && cacheName.startsWith('todo-app-assets-')) {
+                    // 💡 حذف تمام کش‌هایی که با نام‌های قدیمی مطابقت دارند (بدون Hash فعلی)
+                    if (cacheName.startsWith('todo-app-assets-v') && cacheName !== CACHE_STATIC_ASSETS) {
                         console.log('Deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
         })
-        // گرفتن کنترل صفحه بلافاصله پس از فعال‌سازی
+        // 💡 گرفتن کنترل صفحه بلافاصله پس از فعال‌سازی
         .then(() => self.clients.claim()) 
     );
 });
@@ -91,6 +91,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: rtlBody,
+    // ⚠️ ارجاع به آیکون‌ها حذف شد تا ریسک 404 در Production از بین برود
     vibrate: [100, 50, 100],
     data: { url },
     dir: 'rtl',
@@ -132,7 +133,7 @@ async function openOrFocus(url) {
     includeUncontrolled: true,
   });
   for (const client of allClients) {
-    if (client.url.includes(url) && 'focus' in client) { // 👈 تغییر برای URLهای شامل path
+    if (client.url.includes(url) && 'focus' in client) { 
       return client.focus();
     }
   }
@@ -149,10 +150,27 @@ self.addEventListener('pushsubscriptionchange', async (event) => {
     const reg = await self.registration;
     const newSub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: null, // VAPID public key
+      applicationServerKey: null, // ⚠️ باید با VAPID public key جایگزین شود
     });
     // TODO: اینجا newSub رو با fetch به بک‌اند POST کنی
   } catch (e) {
     console.error('Push subscription change error:', e);
+  }
+});
+
+
+/**
+ * 🌟 بخش جدید: مدیریت پیام skipWaiting 🌟
+ * به Worker جدید اجازه می‌دهد تا کنترل صفحه را بلافاصله در دست بگیرد.
+ */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    console.log('Skipping waiting phase via client message...');
+    
+    // اجرای متد skipWaiting()
+    self.skipWaiting();
+    
+    // گرفتن کنترل همه تب‌های باز
+    self.clients.claim();
   }
 });

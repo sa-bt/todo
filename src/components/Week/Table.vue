@@ -16,12 +16,14 @@ const expandedDays = ref({})
 
 // باز کردن امروز به صورت پیش‌فرض و اسکرول به آن
 onMounted(() => {
-    expandedDays.value[todayShamsi] = true;
+    // 💡 باز کردن روز جاری تنها در صورتی که تسکی در آن وجود داشته باشد
+    if (getDayTaskCount(todayShamsi) > 0) {
+        expandedDays.value[todayShamsi] = true;
+    }
     
     nextTick(() => {
         const todayElement = document.querySelector(`.day-card-${todayShamsi}`)
         if (todayElement) {
-            // اسکرول نرم به بالای کارت روز جاری
             todayElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
     })
@@ -33,18 +35,18 @@ function toggleTask(taskRow, day) {
 
 // تابع کمکی برای محاسبه درصد
 function calculatePercentage(completed, total) {
-    if (total === 0) return 0; // اگر تسکی تعریف نشده باشد، 0٪
+    if (total === 0) return 0;
     return Math.round((completed / total) * 100);
 }
 
-// تعداد کل تسک‌های تعریف شده برای یک روز
+// تعداد کل تسک‌های تعریف شده برای یک روز (با ایمن‌سازی کامل)
 function getDayTaskCount(dayDate) {
-    return props.tasksRows.filter(row => row.weekTasks[dayDate]).length;
+    return props.tasksRows.filter(row => row && row.weekTasks?.[dayDate]).length; 
 }
 
-// تعداد تسک‌های تکمیل شده برای یک روز
+// تعداد تسک‌های تکمیل شده برای یک روز (با ایمن‌سازی کامل)
 function getDayCompletedCount(dayDate) {
-    return props.tasksRows.filter(row => row.weekTasks[dayDate]?.is_done).length;
+    return props.tasksRows.filter(row => row && row.weekTasks?.[dayDate]?.is_done).length;
 }
 
 // محاسبه Progress برای روز (استفاده در Progress Bar روزانه)
@@ -53,6 +55,16 @@ function getDayProgress(dayDate) {
     const total = getDayTaskCount(dayDate);
     return calculatePercentage(completed, total);
 }
+
+// 🌟 تابع جدید: فیلتر کردن ردیف‌های فعال برای یک روز خاص
+function getRowsForDay(dayDate) {
+    if (!props.tasksRows || props.tasksRows.length === 0) {
+        return [];
+    }
+    // 💡 فیلتر بر اساس وجود تسک در روز داده شده و تضمین وجود row
+    return props.tasksRows.filter(row => row && row.weekTasks?.[dayDate]);
+}
+
 
 function getCardClasses(task) {
   const baseClasses = 'shadow-sm hover:shadow-md transition-all duration-300'
@@ -110,8 +122,8 @@ function toggleDayExpansion(dayDate) {
             </div>
 
             <div 
-                v-for="row in tasksRows" 
-                :key="row.goal_id" 
+                v-for="(row, index) in tasksRows" 
+                :key="row?.goal_id || index" 
                 class="py-4 border-b border-token/50"
             >
                 <div class="grid grid-cols-[250px_repeat(7,1fr)] gap-3 items-start">
@@ -125,7 +137,7 @@ function toggleDayExpansion(dayDate) {
                         :key="day.date"
                         class="rounded-xl relative flex items-center justify-center p-1.5 sm:p-2 cursor-pointer tap-target"
                         :class="[
-                            getCardClasses(row.weekTasks[day.date]),
+                            getCardClasses(row.weekTasks?.[day.date]),
                             { 'ring-2 ring-[var(--color-accent)]/50': day.date === todayShamsi } 
                         ]"
                         @click="toggleTask(row, day.date)"
@@ -133,17 +145,17 @@ function toggleDayExpansion(dayDate) {
                         tabindex="0"
                     >
                         <component 
-                            :is="TaskIcon(row.weekTasks[day.date])" 
+                            :is="TaskIcon(row.weekTasks?.[day.date])" 
                             :class="[
                                 'w-6 h-6 task-bounce',
-                                row.weekTasks[day.date] && row.weekTasks[day.date].is_done 
+                                row.weekTasks?.[day.date]?.is_done 
                                     ? 'text-green-600 dark:text-green-400' 
-                                    : (row.weekTasks[day.date]
+                                    : (row.weekTasks?.[day.date]
                                         ? 'text-yellow-600 dark:text-yellow-400'
                                         : 'text-[var(--color-text-secondary)] opacity-60')
                             ]"
                             aria-hidden="true"
-                        />
+                        ></component>
                     </div>
 
                 </div>
@@ -194,14 +206,15 @@ function toggleDayExpansion(dayDate) {
                     :is="expandedDays[day.date] ? ChevronUp : ChevronDown" 
                     class="w-6 h-6 flex-shrink-0" 
                     :class="day.date === todayShamsi ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'"
-                />
+                ></component>
             </button>
             
             <Transition name="fade-slide">
                 <div v-if="expandedDays[day.date]" class="p-3 border-t border-token/50 bg-surface-soft">
                     <div 
-                        v-for="row in tasksRows"
-                        :key="row.goal_id"
+                        v-for="row in getRowsForDay(day.date)"
+                        :key="row.goal_id" 
+                        
                         class="flex items-center justify-between py-3 border-b border-token/30 last:border-b-0 tap-target"
                         @click="toggleTask(row, day.date)"
                     >
@@ -209,22 +222,26 @@ function toggleDayExpansion(dayDate) {
                             <span class="text-sm font-medium text-[var(--color-heading)]">
                                 {{ row.goal_title }}
                             </span>
-                            <span v-if="row.weekTasks[day.date]" class="text-[10px] text-[var(--color-text-secondary)] mt-1">
-                                وضعیت: {{ row.weekTasks[day.date]?.is_done ? 'انجام شد' : 'منتظر' }}
+                            <span v-if="row.weekTasks?.[day.date]" class="text-[10px] text-[var(--color-text-secondary)] mt-1">
+                                وضعیت: {{ row.weekTasks?.[day.date]?.is_done ? 'انجام شد' : 'منتظر' }}
                             </span>
                         </div>
                         
                         <component 
-                            :is="TaskIcon(row.weekTasks[day.date])" 
+                            :is="TaskIcon(row.weekTasks?.[day.date])" 
                             class="w-6 h-6 flex-shrink-0"
                             :class="[
-                                row.weekTasks[day.date] && row.weekTasks[day.date].is_done 
+                                row.weekTasks?.[day.date]?.is_done 
                                     ? 'text-green-600' 
-                                    : (row.weekTasks[day.date]
+                                    : (row.weekTasks?.[day.date]
                                         ? 'text-yellow-600'
                                         : 'text-indigo-400 opacity-60') 
                             ]"
-                        />
+                        ></component>
+                    </div>
+
+                    <div v-if="getDayTaskCount(day.date) === 0" class="text-center py-2 text-sm text-text-secondary">
+                        هیچ تسکی برای این روز تعریف نشده است.
                     </div>
                 </div>
             </Transition>
