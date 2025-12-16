@@ -2,76 +2,82 @@
    Service Worker for Todo WebPush Notifications (RTL)
    ======================================================= */
 
-// 🌟 بخش اصلاح شده: استفاده از BUILD_HASH تزریقی از Vite
-// اگر BUILD_HASH توسط ابزار بیلد تزریق نشد، از یک مقدار پیش‌فرض استفاده کند.
-const BUILD_HASH = self.BUILD_HASH || Date.now(); 
+// 🌟 تزریق خودکار لیست فایل‌های بیلد شده توسط Vite
+// مقدار این متغیر در زمان بیلد توسط پلاگین VitePWA پر می‌شود
+const precachedAssets = self.__WB_MANIFEST || [];
 
-// 💡 نام کش اکنون شامل Hash بیلد است تا Cache Busting خودکار انجام شود.
+// استفاده از BUILD_HASH تزریقی از Vite برای جلوگیری از تداخل کش
+const BUILD_HASH = self.BUILD_HASH || Date.now().toString(); 
 const CACHE_STATIC_ASSETS = 'todo-app-assets-v' + BUILD_HASH;
 
-// ⚠️ این لیست را بر اساس فایل‌های خروجی بیلد خود تکمیل کنید.
-const urlsToCache = [
+// فایل‌های پایه که همیشه باید در کش باشند
+const customUrlsToCache = [
   '/', 
-  '/index.html', 
-  // فایل‌های مهم JS/CSS خود را اینجا لیست کنید.
+  '/manifest.webmanifest',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png'
 ];
 
-// =======================================================
-
+/**
+ * رویداد Install: ذخیره فایل‌ها در کش
+ */
 self.addEventListener('install', (event) => {
-    // 💡 مهم: skipWaiting در اینجا باعث می‌شود Worker جدید بلافاصله کنترل صفحه را بگیرد.
     self.skipWaiting();
-    
-    // کش کردن فایل‌های استاتیک اپلیکیشن
     event.waitUntil(
         caches.open(CACHE_STATIC_ASSETS)
             .then((cache) => {
-                console.log('Opened cache for static assets:', CACHE_STATIC_ASSETS);
-                return cache.addAll(urlsToCache).catch((err) => {
-                    console.warn('Failed to cache some assets (this may be normal if assets are hash-named):', err);
-                });
-            })
+                console.log('Installing new SW version:', BUILD_HASH);
+                
+                // کش کردن آدرس‌های دستی
+                cache.addAll(customUrlsToCache);
+                
+                // کش کردن فایل‌های بیلد شده (index.html, JS, CSS و غیره)
+                const urlsFromManifest = precachedAssets.map(asset => 
+                    typeof asset === 'string' ? asset : asset.url
+                );
+                return cache.addAll(urlsFromManifest.filter(url => url));
+            }).catch(err => console.warn('Install Cache Warning:', err))
     );
 });
 
+/**
+ * رویداد Activate: حذف کش‌های قدیمی
+ */
 self.addEventListener('activate', (event) => {
-    // 🌟 بخش جدید: حذف کش‌های قدیمی (Cache Busting)
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    // 💡 حذف تمام کش‌هایی که با نام‌های قدیمی مطابقت دارند (بدون Hash فعلی)
+                    // اگر نام کش با پیشوند ما شروع می‌شود اما با ورژن فعلی متفاوت است، حذفش کن
                     if (cacheName.startsWith('todo-app-assets-v') && cacheName !== CACHE_STATIC_ASSETS) {
-                        console.log('Deleting old cache:', cacheName);
+                        console.log('Deleting outdated cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
-        })
-        // 💡 گرفتن کنترل صفحه بلافاصله پس از فعال‌سازی
-        .then(() => self.clients.claim()) 
+        }).then(() => self.clients.claim()) 
     );
 });
 
 /**
- * Fetch event handler - برای برگرداندن محتوا از کش یا شبکه
+ * رویداد Fetch: استراتژی Cache-First برای سرعت بیشتر
  */
 self.addEventListener('fetch', (event) => {
-    // استراتژی Cache First - ابتدا کش، اگر نبود شبکه
+    // اجازه بده درخواست‌های API مستقیماً به شبکه بروند
+    if (event.request.url.includes('/api/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
+                return response || fetch(event.request);
             })
     );
 });
 
-
 /**
- * Push event handler - مدیریت اعلان‌های دریافتی
+ * رویداد Push: مدیریت اعلان‌ها با پشتیبانی کامل از RTL و فارسی
  */
 self.addEventListener('push', (event) => {
   let payload = {};
@@ -79,19 +85,19 @@ self.addEventListener('push', (event) => {
     payload = event.data ? event.data.json() : {};
   } catch (e) {
     console.error('Push payload parse error:', e);
+    payload = { title: 'اعلان جدید', body: event.data ? event.data.text() : '' };
   }
 
   const title = payload.title || 'اعلان جدید';
   const body = payload.body || 'مشاهده کنید';
   const url = payload.url || (payload.data && payload.data.url) || '/';
 
-  // 🔹 اضافه کردن جهت راست‌به‌چپ
+  // 🔹 اضافه کردن کاراکترهای کنترلی یونیکد برای اجبار حالت RTL
   const rtlBody = '\u202B' + body + '\u202C';
   const rtlTitle = '\u202B' + title + '\u202C';
 
   const options = {
     body: rtlBody,
-    // ⚠️ ارجاع به آیکون‌ها حذف شد تا ریسک 404 در Production از بین برود
     vibrate: [100, 50, 100],
     data: { url },
     dir: 'rtl',
@@ -108,24 +114,16 @@ self.addEventListener('push', (event) => {
 });
 
 /**
- * Click event handler - مدیریت کلیک روی اعلان
+ * رویداد Notification Click: مدیریت کلیک روی نوتیفیکیشن
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url =
-    (event.notification.data && event.notification.data.url) ||
-    '/';
-
-  if (event.action === 'open') {
-    event.waitUntil(openOrFocus(url));
-    return;
-  }
-
+  const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(openOrFocus(url));
 });
 
 /**
- * Opens existing tab or creates a new one
+ * پیدا کردن تب بازِ مرتبط یا باز کردن تب جدید
  */
 async function openOrFocus(url) {
   const allClients = await clients.matchAll({
@@ -143,34 +141,11 @@ async function openOrFocus(url) {
 }
 
 /**
- * Optional: handle push subscription refresh
- */
-self.addEventListener('pushsubscriptionchange', async (event) => {
-  try {
-    const reg = await self.registration;
-    const newSub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: null, // ⚠️ باید با VAPID public key جایگزین شود
-    });
-    // TODO: اینجا newSub رو با fetch به بک‌اند POST کنی
-  } catch (e) {
-    console.error('Push subscription change error:', e);
-  }
-});
-
-
-/**
- * 🌟 بخش جدید: مدیریت پیام skipWaiting 🌟
- * به Worker جدید اجازه می‌دهد تا کنترل صفحه را بلافاصله در دست بگیرد.
+ * مدیریت پیام‌های SKIP_WAITING برای آپدیت فوری سرویس ورکر
  */
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.action === 'skipWaiting') {
-    console.log('Skipping waiting phase via client message...');
-    
-    // اجرای متد skipWaiting()
+  if (event.data && (event.data.action === 'skipWaiting' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
-    
-    // گرفتن کنترل همه تب‌های باز
     self.clients.claim();
   }
 });
