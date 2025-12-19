@@ -28,7 +28,7 @@ export default defineConfig({
       },
 
       manifest: {
-        name: 'NPM Todo',
+        name: 'Do It',
         short_name: 'Todo',
         description: 'مدیریت تسک‌ها و اهداف روزانه',
         theme_color: '#2563EB',
@@ -36,9 +36,25 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
+  { 
+    src: '/pwa-192x192.png', 
+    sizes: '192x192', 
+    type: 'image/png',
+    purpose: 'any' // آیکون معمولی
+  },
+  { 
+    src: '/pwa-512x512.png', 
+    sizes: '512x512', 
+    type: 'image/png',
+    purpose: 'maskable' // برای مچ شدن با لانچرهای مختلف گوشی
+  },
+  {
+    src: '/pwa-badge.png', // آدرس فایل بج که ساختی
+    sizes: '96x96',
+    type: 'image/png',
+    purpose: 'monochrome' // 👈 این خیلی مهمه! به سیستم می‌گه این تک‌رنگه
+  }
+],
       },
     }),
   ],
