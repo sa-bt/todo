@@ -1,472 +1,385 @@
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue' 
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue' 
 import jalaali from 'jalaali-js'
 import api from '@/plugins/axios'
-import { ListChecks, CheckCircle2, Star, CalendarDays, Zap } from 'lucide-vue-next' 
+import { 
+  ListChecks, CheckCircle2, Star, CalendarDays, Zap, LayoutGrid, Hash, Calendar, X
+} from 'lucide-vue-next' 
 import BaseSelect from './UI/BaseSelect.vue' 
 
-/* ===== اندازه‌ها ===== */
-const CELL = 14   // px
-const GAP  = 1    // px
-const LABEL_H = 18 // ارتفاع نوار عنوان ماه‌ها (px)
-
-/* ===== پالت شدت جدید (0..7) ===== */
+/* ===== تنظیمات ظاهری ===== */
+const CELL = 14   
+const GAP  = 2    
 const LEVEL_COLORS = [
-  'var(--color-background-mute)', // 0: بدون فعالیت یا روز آینده
-  '#B91C1C', // 1: 0-20% (قرمز پررنگ / Red-700)
-  '#DC2626', // 2: 20-30% (قرمز معمولی / Red-600)
-  '#FCD34D', // 3: 30-45% (نارنجی روشن / Amber-300)
-  '#F59E0B', // 4: 45-55% (نارنجی معمولی / Amber-500)
-  '#86EFAC', // 5: 55-70% (سبز کمرنگ / Emerald-300)
-  '#34D399', // 6: 70-85% (سبز معمولی / Emerald-400)
-  '#059669'  // 7: 85-100% (سبز پررنگ / Emerald-600)
+  'var(--color-background-mute)', 
+  '#B91C1C', '#DC2626', '#FCD34D', '#F59E0B', '#86EFAC', '#34D399', '#059669'
 ]
 
-/* ===== راهنمای رنگ (Legend) ===== */
-const LEVEL_LEGENDS = [
-  { color: LEVEL_COLORS[1], label: '۰٪ تا ۲۰٪' },
-  { color: LEVEL_COLORS[2], label: '۲۰٪ تا ۳۰٪' },
-  { color: LEVEL_COLORS[3], label: '۳۰٪ تا ۴۵٪' },
-  { color: LEVEL_COLORS[4], label: '۴۵٪ تا ۵۵٪' },
-  { color: LEVEL_COLORS[5], label: '۵۵٪ تا ۷۰٪' },
-  { color: LEVEL_COLORS[6], label: '۷۰٪ تا ۸۵٪' },
-  { color: LEVEL_COLORS[7], label: '۸۵٪ تا ۱۰۰٪' },
-  { color: LEVEL_COLORS[0], label: 'بدون فعالیت ' } 
-]
-
-/* ===== State & Refs ===== */
-const years = Array.from({ length: 10 }, (_, i) => 1400 + i)
-const selectedYear = ref(1404)
-const activitiesData = ref({}) 
-const perfectDaysCount  = ref(null) 
-const avgCompletionPct  = ref(null) 
-const inactiveDays      = ref(null) 
-const totalTasksYTD     = ref(null) 
-
-const heatmapContainer = ref(null) 
-const yearViewContainer = ref(null) 
-
-/* ===== Labels ===== */
-const weekDays   = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه']
 const monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند']
+const weekDaysShort = ['ش','ی','د','س','چ','پ','ج']
 
-/* ===== Today's Key ===== */
-const todayKey = computed(() => { 
-  const { jy, jm, jd } = jalaali.toJalaali(new Date());
-  return `${jy}-${jm}-${jd}`;
-});
+/* ===== وضعیت (State) ===== */
+const selectedYear = ref(1404)
+const years = Array.from({ length: 10 }, (_, i) => 1400 + i)
+const activitiesData = ref({}) 
+const stats = ref({ total: 0, perfect: 0, avg: 0, inactive: 0 })
+const activeTab = ref('yearly')
+const heatmapContainer = ref(null)
+const tip = ref({ show: false, x: 0, y: 0, data: null, isMobile: false })
 
-/* ===== Scroll Logic (Horizontal) ===== */
-function scrollToToday() {
-  // if (window.innerWidth >= 768) return; 
+/* ===== تشخیص زمان ===== */
+const todayObj = jalaali.toJalaali(new Date())
+const todayNumeric = todayObj.jy * 10000 + todayObj.jm * 100 + todayObj.jd
+const todayKey = computed(() => `${todayObj.jy}-${todayObj.jm}-${todayObj.jd}`)
 
-  if (!heatmapContainer.value) return;
-
-  const todayCell = heatmapContainer.value.querySelector('.today-cell');
-
-  if (todayCell) {
-    todayCell.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest', 
-      inline: 'center' 
-    });
-  }
+const getLevel = (total, done, isFuture = false) => {
+    if (isFuture || !total) return 0; 
+    const p = (done / total) * 100;
+    if (p <= 20) return 1; if (p <= 30) return 2; if (p <= 45) return 3; 
+    if (p <= 55) return 4; if (p <= 70) return 5; if (p <= 85) return 6; 
+    return 7; 
 }
 
-/* ===== Auto Scroll Logic (Vertical & Timed Horizontal - Delay: 1200ms) ===== */
-function autoScroll() {
-  // if (window.innerWidth >= 768) return; 
-
-  const currentJalaaliYear = jalaali.toJalaali(new Date()).jy;
-  if (selectedYear.value !== currentJalaaliYear) return; 
-
-  const heatmapEl = heatmapContainer.value;
-  if (!heatmapEl) return;
-  
-  // مرحله ۱: اسکرول عمودی صفحه به بالای کانتینر هیت‌مپ
-  window.scrollTo({
-    top: heatmapEl.offsetTop,
-    behavior: 'smooth'
-  });
-
-  // مرحله ۲: اجرای اسکرول افقی با تأخیر طولانی‌تر
-  setTimeout(() => {
-    scrollToToday(); 
-  }, 1200); 
-}
-
-/* ===== Fetch and Stats Calculation ===== */
+/* ===== Logic: Fetch & Scroll ===== */
 async function fetchActivities(year){
   try{
     const res = await api.get(`/activities/${year}`)
-    const data = res.data?.data || {} 
-    activitiesData.value = data
-    
-    // خواندن گزارش‌ها
-    perfectDaysCount.value = res.data?.perfect_days_count || 0
-    avgCompletionPct.value = res.data?.average_completion_percentage || 0 
-    inactiveDays.value     = res.data?.inactive_days || 0 
-    totalTasksYTD.value    = res.data?.total_tasks_year_to_date || 0 
-    
-    // فراخوانی AutoScroll 
-    const currentJalaaliYear = jalaali.toJalaali(new Date()).jy;
-    if (year === currentJalaaliYear) {
+    activitiesData.value = res.data?.data || {}
+    stats.value = {
+      total: res.data?.total_tasks_year_to_date || 0,
+      perfect: res.data?.perfect_days_count || 0,
+      avg: res.data?.average_completion_percentage || 0,
+      inactive: res.data?.inactive_days || 0
+    }
+    if (year === todayObj.jy) {
       nextTick(autoScroll); 
     }
-    
-  }catch(e){
-    console.error('خطا در گرفتن داده:', e)
-    activitiesData.value = {}
-  }
+  }catch(e){ console.error(e) }
 }
-watch(selectedYear, y => fetchActivities(y))
-onMounted(() => fetchActivities(selectedYear.value))
 
+function autoScroll() {
+  const el = heatmapContainer.value?.querySelector('.today-cell');
+  if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
 
-/* ===== Year meta and other computed properties (بدون تغییر) ===== */
-function isLeapJalaaliYear(y){ return ((y * 8 + 29) % 33) < 8 }
-
+/* ===== محاسبات تقویم ===== */
+const isLeap = (y) => ((y * 8 + 29) % 33) < 8
 const yearMeta = computed(() => { 
   const year = selectedYear.value
-  const daysInYear = isLeapJalaaliYear(year) ? 366 : 365
+  const daysInYear = isLeap(year) ? 366 : 365
   const { gy, gm, gd } = jalaali.toGregorian(year, 1, 1)
   const startDate = new Date(gy, gm - 1, gd)
   const startWeekday = (startDate.getDay() + 1) % 7 
   return { year, daysInYear, startDate, startWeekday }
 })
 
-
-/* ===== Heat level ===== */
-function getLevel(key, total, done) {
-    const [jy, jm, jd] = key.split('-').map(Number);
-    const todayJalaali = jalaali.toJalaali(new Date());
-    const dayNumeric = jy * 10000 + jm * 100 + jd;
-    const todayNumeric = todayJalaali.jy * 10000 + todayJalaali.jm * 100 + todayJalaali.jd;
-    if (dayNumeric > todayNumeric) return 0; 
-    if (!total) return 0; 
-    const p = (done / total) * 100;
-    if (p <= 20) return 1; 
-    if (p <= 30) return 2; 
-    if (p <= 45) return 3; 
-    if (p <= 55) return 4; 
-    if (p <= 70) return 5; 
-    if (p <= 85) return 6; 
-    return 7; 
-}
-
-
-/* ===== Build days ===== */
 const yearDays = computed(() => {
   const { daysInYear, startDate, startWeekday } = yearMeta.value 
-  const days = []
-  for (let i = 0; i < daysInYear; i++){
-    const rowIndex = (i + startWeekday) % 7
-    const colIndex = Math.floor((i + startWeekday) / 7)
+  return Array.from({ length: daysInYear }, (_, i) => {
     const dateObj = new Date(startDate.getTime() + i * 86400000)
     const { jy, jm, jd } = jalaali.toJalaali(dateObj)
     const key = `${jy}-${jm}-${jd}`
-    const total = activitiesData.value?.[key]?.total || 0
-    const done  = activitiesData.value?.[key]?.done  || 0
-    const level = getLevel(key, total, done) 
-    days.push({
-      rowIndex, colIndex, jy, jm, jd, key, total, done, level,
-      shamsiDate: `${jy}/${jm}/${jd}`
-    })
-  }
-  return days
-})
+    const d = activitiesData.value[key] || { total: 0, done: 0 }
+    const dayNum = jy * 10000 + jm * 100 + jd
+    const isFuture = dayNum > todayNumeric
 
-
-/* ===== ستون شروع هر ماه و ستون‌ها ===== */
-const monthStarts = computed(() => {
-  const { year, startDate, startWeekday } = yearMeta.value 
-  const res = []
-  for (let m = 1; m <= 12; m++){
-    const { gy, gm, gd } = jalaali.toGregorian(year, m, 1)
-    const d = new Date(gy, gm - 1, gd)
-    const diff = Math.round((d - startDate) / 86400000)
-    const colIndex = Math.floor((diff + startWeekday) / 7)
-    res.push({ name: monthNames[m - 1], colIndex })
-  }
-  return res
-})
-
-const columnsCount = computed(() => {
-  if (!yearDays.value.length) return 0
-  const maxCol = yearDays.value.reduce((mx, d) => Math.max(mx, d.colIndex), 0)
-  return maxCol + 1
-})
-const monthSpans = computed(() => {
-  const cols = columnsCount.value
-  const starts = monthStarts.value
-  return starts.map((m, i) => {
-    const start = m.colIndex
-    const end   = (i < starts.length - 1 ? starts[i+1].colIndex : cols)
-    return { name: m.name, start, end }
+    return {
+      rowIndex: (i + startWeekday) % 7, colIndex: Math.floor((i + startWeekday) / 7),
+      key, jy, jm, jd, total: d.total, done: d.done,
+      level: getLevel(d.total, d.done, isFuture),
+      dateStart: `${jy}/${jm}/${jd}`, isFuture
+    }
   })
 })
 
+const monthSpans = computed(() => {
+  const { year, startDate, startWeekday } = yearMeta.value 
+  const cols = yearDays.value.length ? Math.max(...yearDays.value.map(d => d.colIndex)) + 1 : 0
+  const res = []
+  for (let m = 1; m <= 12; m++){
+    const { gy: mGy, gm: mGm, gd: mGd } = jalaali.toGregorian(year, m, 1)
+    const diff = Math.round((new Date(mGy, mGm - 1, mGd) - startDate) / 86400000)
+    res.push({ name: monthNames[m - 1], colIndex: Math.floor((diff + startWeekday) / 7) })
+  }
+  return res.map((m, i) => ({
+    name: m.name, start: m.colIndex, end: (i < res.length - 1 ? res[i+1].colIndex : cols)
+  }))
+})
 
-/* ===== Tooltip ===== */
-const tip = ref({ show:false, x:0, y:0, day:null })
+const weeklyStats = computed(() => {
+  const weeks = []
+  for (let i = 0; i < yearDays.value.length; i += 7) {
+    const chunk = yearDays.value.slice(i, i + 7)
+    const total = chunk.reduce((s, d) => s + d.total, 0)
+    const done = chunk.reduce((s, d) => s + d.done, 0)
+    const isFuture = chunk[0].jy * 10000 + chunk[0].jm * 100 + chunk[0].jd > todayNumeric
+    weeks.push({
+      title: `هفته ${Math.floor(i / 7) + 1}`,
+      dateStart: chunk[0].dateStart, dateEnd: chunk[chunk.length-1].dateStart,
+      total, done, percent: total ? Math.round((done / total) * 100) : 0,
+      level: getLevel(total, done, isFuture), isCurrent: chunk.some(d => d.key === todayKey.value)
+    })
+  }
+  return weeks
+})
 
-const currentTipTasks = computed(() => { 
-    if (!tip.value.day || !tip.value.day.key) return { total: 0, done: 0, percent: 0 };
-    const data = activitiesData.value?.[tip.value.day.key] || {};
+const monthlyStats = computed(() => {
+  return monthNames.map((name, i) => {
+    const days = yearDays.value.filter(d => d.jm === i + 1)
+    const total = days.reduce((s, d) => s + d.total, 0)
+    const done = days.reduce((s, d) => s + d.done, 0)
+    const isFuture = (selectedYear.value * 100 + (i + 1)) > (todayObj.jy * 100 + todayObj.jm)
     return {
-        total: data.total || 0,
-        done: data.done || 0,
-        percent: data.total ? Math.round((data.done / data.total) * 100) : 0
-    };
+      title: name, dateStart: days[0].dateStart, dateEnd: days[days.length - 1].dateStart,
+      total, done, percent: total ? Math.round((done / total) * 100) : 0, 
+      level: getLevel(total, done, isFuture),
+      sparkPoints: days.map(d => (d.total && !d.isFuture) ? Math.round((d.done / d.total) * 100) : 0)
+    }
+  })
+})
+
+/* ===== Tooltip & Global Click Handling ===== */
+function handleToggleTip(e, data) {
+  e.stopPropagation(); 
+  const isMobile = window.innerWidth < 768
+  tip.value.isMobile = isMobile
+  tip.value.data = data
+  tip.value.show = true
+  if (!isMobile) {
+    tip.value.x = Math.min(e.clientX + 15, window.innerWidth - 250)
+    tip.value.y = e.clientY - 180
+  }
+}
+
+const closeGlobal = (e) => {
+  if (!tip.value.show) return;
+  const tooltipEl = document.querySelector('.tip-card-final');
+  // اگر کلیک بیرون از کارت تولتیپ بود، ببندش
+  if (tooltipEl && !tooltipEl.contains(e.target)) {
+    tip.value.show = false;
+  }
+};
+
+onMounted(() => {
+  fetchActivities(selectedYear.value);
+  window.addEventListener('click', closeGlobal);
 });
 
+onUnmounted(() => {
+  window.removeEventListener('click', closeGlobal);
+});
 
-function positionTip(clientX, clientY){
-  const pad = 10, W = 220, H = 96
-  let x = clientX + 12
-  let y = clientY - H - 12
-  if (y < pad) y = clientY + 12
-  x = Math.max(pad, Math.min(x, window.innerWidth  - W - pad))
-  y = Math.max(pad, Math.min(y, window.innerHeight - H - pad))
-  return { x, y }
-}
-function showTooltip(e, day){
-  tip.value.day = { ...day } 
-  const { x, y } = positionTip(e.clientX, e.clientY)
-  tip.value.x = x; tip.value.y = y; tip.value.show = true
-}
-function moveTooltip(e){
-  if (!tip.value.show) return
-  const { x, y } = positionTip(e.clientX, e.clientY)
-  tip.value.x = x; tip.value.y = y
-}
-function hideTooltip(){ tip.value.show = false; tip.value.day = null }
+watch(selectedYear, y => fetchActivities(y))
 
-/* ===== Select options ===== */
-const yearOptions = years.map(y => ({ value:y, label: String(y) }))
+function getSparklinePath(points) {
+  if (!points || points.length < 2) return ''
+  const width = 100; const height = 30
+  const step = width / (points.length - 1)
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${i * step} ${height - (p * height / 100)}`).join(' ')
+}
 </script>
 
 <template>
-  <div class="w-full min-h-screen p-6 bg-[var(--color-background)] text-[var(--color-text)]" 
-       @mousemove="moveTooltip" 
-       ref="yearViewContainer">
-    <div class="w-full flex justify-end mb-4">
-      <BaseSelect v-model="selectedYear"
-       :options="yearOptions" 
-       class="w-full max-w-[160px] md:w-40" 
-        name="year" 
-        placeholder="انتخاب سال" />
+  <div class="stats-page">
+    
+    <div class="header-row">
+      <div class="tab-box">
+        <button v-for="t in ['yearly','weekly','monthly']" :key="t" @click="activeTab = t" 
+                :class="['t-btn', {active: activeTab === t}]">
+          <LayoutGrid v-if="t==='yearly'" class="s-icon"/>
+          <Hash v-if="t==='weekly'" class="s-icon"/>
+          <Calendar v-if="t==='monthly'" class="s-icon"/>
+          <span>{{ t === 'yearly' ? 'سالانه' : t === 'weekly' ? 'هفتگی' : 'ماهانه' }}</span>
+        </button>
+      </div>
+      <BaseSelect v-model="selectedYear" name="year-select" :options="years.map(y=>({value:y, label:String(y)}))" class="year-sel" />
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="stat-card">
-        <div class="stat-icon bg-[var(--color-primary)]/10 text-[var(--color-primary)]"><ListChecks class="w-5 h-5"/></div>
-        <div class="stat-value">{{ totalTasksYTD !== null ? totalTasksYTD : '—' }}</div>
-        <div class="stat-label">کل تسک‌های تعریف‌شده (تا امروز)</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon bg-green-500/10 text-green-500"><CheckCircle2 class="w-5 h-5"/></div>
-        <div class="stat-value">{{ perfectDaysCount !== null ? perfectDaysCount : '—' }}</div>
-        <div class="stat-label">روزهای کمال (تکمیل ۱۰۰٪)</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon bg-orange-500/10 text-orange-500"><Star class="w-5 h-5"/></div>
-        <div class="stat-value">{{ avgCompletionPct !== null ? avgCompletionPct : '—' }}%</div>
-        <div class="stat-label">میانگین درصد تکمیل</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon bg-red-500/10 text-red-500"><Zap class="w-5 h-5"/></div>
-        <div class="stat-value">{{ inactiveDays !== null ? inactiveDays : '—' }}</div>
-        <div class="stat-label">روزهای بدون فعالیت</div>
+    <div class="stats-cards-grid">
+      <div v-for="(v, l) in {'کل تسک':stats.total, 'روز طلایی':stats.perfect, 'بازدهی':stats.avg+'%', 'استراحت':stats.inactive}" :key="l" class="stat-card">
+        <div class="stat-v">{{v}}</div>
+        <div class="stat-l">{{l}}</div>
       </div>
     </div>
 
-    <div class="grid grid-cols-3 gap-x-2 gap-y-2 text-xs text-[var(--color-text-secondary)] mb-3 border border-[var(--color-border)] rounded-lg p-3 bg-[var(--color-background-soft)] sm:flex sm:flex-wrap sm:gap-x-4">
-      <span v-for="(item,idx) in LEVEL_LEGENDS" :key="idx"
-            class="inline-flex items-center gap-1 rounded-[4px]"
-            :title="item.label"
-      >
-        <span class="inline-block rounded-[4px] border border-[var(--color-border)] hover:scale-[1.06] transition-transform"
-            :style="{ width:'14px', height:'14px', backgroundColor:item.color }"
-        ></span>
-        <span>
-            {{ item.label }}
-        </span>
-      </span>
-    </div>
-
-    <div class="w-full overflow-auto" ref="heatmapContainer">
-      <div class="relative w-max mx-auto" :style="{ paddingTop: `${LABEL_H}px` }">
-        <div class="flex items-start gap-3">
-          <div class="grid grid-rows-7 flex-shrink-0" :style="{ gap: `${GAP}px` }">
-            <div
-                v-for="(d,i) in weekDays" :key="i"
-                class="text-[11px] font-medium text-[var(--color-text-secondary)]"
-                :style="{ height:`${CELL}px`, lineHeight:`${CELL}px` }"
-            >
-              {{ d }}
+    <div class="main-panel shadow-inner">
+      
+      <div v-if="activeTab === 'yearly'" class="fade-in heatmap-wrapper" ref="heatmapContainer">
+        <div class="heatmap-scroll custom-scroll">
+          <div class="heatmap-inner md:justify-center">
+            <div class="days-labels">
+              <span v-for="d in weekDaysShort" :key="d">{{d}}</span>
             </div>
-          </div>
-
-          <div class="relative">
-            <div class="absolute left-0 right-0"
-                 :style="{ top: `-${LABEL_H}px`, height: LABEL_H + 'px' }">
-              <div
-                  class="grid items-end"
-                  :style="{
-                  gridTemplateColumns: `repeat(${columnsCount}, ${CELL}px)`,
-                  columnGap: `${GAP}px`,
-                  height: '100%'
-                }"
-              >
-                <div
-                    v-for="m in monthSpans" :key="m.name"
-                    class="text-[10px] font-semibold text-[var(--color-text-secondary)] text-center select-none"
-                    :style="{ gridColumn: `${m.start + 1} / ${m.end + 1}` }"
-                >
-                  {{ m.name }}
-                </div>
+            <div class="grid-container">
+              <div class="months-row" :style="{ display: 'grid', gridTemplateColumns: `repeat(${yearDays.length ? Math.max(...yearDays.map(d => d.colIndex)) + 1 : 0}, ${CELL}px)`, gap: `${GAP}px` }">
+                <span v-for="m in monthSpans" :key="m.name" :style="{ gridColumn: `${m.start + 1} / ${m.end + 1}` }">{{m.name}}</span>
+              </div>
+              <div class="cells-body" :style="{ display: 'grid', gridTemplateRows: `repeat(7, ${CELL}px)`, gridAutoFlow: 'column', gap: `${GAP}px` }">
+                <button v-for="day in yearDays" :key="day.key" 
+                  class="cell" :class="{'today-cell': day.key === todayKey}"
+                  :style="{ backgroundColor: LEVEL_COLORS[day.level], gridRow: day.rowIndex + 1, gridColumn: day.colIndex + 1 }"
+                  @click.stop="handleToggleTip($event, { title: 'گزارش روزانه', ...day })"
+                ></button>
               </div>
             </div>
-
-            <div class="grid relative"
-                 role="grid"
-                 :style="{
-                   gridTemplateRows: `repeat(7, ${CELL}px)`,
-                   gridAutoColumns: `${CELL}px`,
-                   gap: `${GAP}px`
-                 }">
-              <button
-                  v-for="day in yearDays" :key="day.key" type="button"
-                  class="hm-cell rounded-[3px] border border-[var(--color-border)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                  :class="{'today-cell': day.key === todayKey}" 
-                  :style="{
-                  gridRow: day.rowIndex + 1,
-                  gridColumn: day.colIndex + 1,
-                  backgroundColor: LEVEL_COLORS[day.level]
-                }"
-                  :aria-label="`${day.shamsiDate} — کل ${day.total} / انجام ${day.done}`"
-                  @mouseenter="showTooltip($event, day)"
-                  @mouseleave="hideTooltip"
-                  @focus="(e)=>showTooltip(e, day)"
-                  @blur="hideTooltip"
-              />
-            </div>
           </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'weekly'" class="fade-in weekly-view-grid">
+        <div v-for="w in weeklyStats" :key="w.title" class="week-node" :class="{curr: w.isCurrent}" :style="{backgroundColor: LEVEL_COLORS[w.level]}"
+             @click.stop="handleToggleTip($event, w)">
+          <span class="week-pct-label">{{w.percent}}%</span>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'monthly'" class="fade-in monthly-view-grid">
+        <div v-for="m in monthlyStats" :key="m.title" class="month-node" :style="{borderBottomColor: LEVEL_COLORS[m.level]}"
+             @click.stop="handleToggleTip($event, {title: `ماه ${m.title}`, ...m})">
+          <div class="mo-info">
+            <span class="m-name">{{m.title}}</span> 
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-30">
+              <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+          </div>
+          <div class="sparkline-box">
+            <svg viewBox="0 0 100 30" class="sparkline-svg">
+              <path :d="getSparklinePath(m.sparkPoints)" fill="none" :stroke="LEVEL_COLORS[m.level]" stroke-width="1.5" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div class="mo-bar"><div :style="{width: m.percent+'%', backgroundColor: LEVEL_COLORS[m.level]}"></div></div>
+          <div class="mo-pct-footer" :style="{color: LEVEL_COLORS[m.level]}">{{m.percent}}% پیشرفت</div>
         </div>
       </div>
     </div>
 
-    <div
-        v-if="tip.show && tip.day"
-        class="tip-box fixed z-50 text-xs pointer-events-none"
-        :style="{ left: tip.x+'px', top: tip.y+'px', width:'220px' }"
-    >
-      <div class="tip-inner">
-        <div class="flex items-center gap-2 mb-1">
-          <div class="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-            <CalendarDays class="w-4 h-4" />
+    <div class="legend-row">
+      <span>کم فعالیت</span>
+      <div class="legend-colors">
+        <div v-for="c in LEVEL_COLORS.slice(1)" :key="c" :style="{backgroundColor: c}"></div>
+      </div>
+      <span>پر فعالیت</span>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="tip.show" :class="['tip-root', { 'is-mobile': tip.isMobile }]" 
+           :style="!tip.isMobile ? { left: tip.x+'px', top: tip.y+'px' } : {}">
+        <div class="tip-card-final shadow-2xl" @click.stop>
+          <div class="tip-header">
+            <div class="tip-status-dot" :style="{backgroundColor: LEVEL_COLORS[tip.data.level]}"></div>
+            <span class="tip-title-text">{{tip.data.title}}</span>
+            <button @click="tip.show = false" class="tip-close-x"><X class="w-4 h-4"/></button>
           </div>
-          <div class="font-bold text-sm text-[var(--color-heading)]">{{ tip.day.shamsiDate }}</div>
-        </div>
-        
-        <div class="text-[11px] mb-2 text-[var(--color-text-secondary)]">
-            کل: <span class="font-semibold text-[var(--color-heading)]">{{ currentTipTasks.total }}</span>
-            &nbsp;|&nbsp;
-            انجام: <span class="font-semibold text-[var(--color-heading)]">{{ currentTipTasks.done }}</span>
-        </div>
-        
-        <div class="h-2 w-full rounded bg-[var(--color-border)] overflow-hidden">
-          <div class="h-2 rounded progress-fill"
-               :style="{ 
-                 width: currentTipTasks.percent + '%' 
-               }"></div>
+          
+          <div class="tip-dates-area">
+            <div class="date-row"><span>تاریخ شروع:</span> <b>{{tip.data.dateStart}}</b></div>
+            <div v-if="tip.data.dateEnd" class="date-row"><span>تاریخ پایان:</span> <b>{{tip.data.dateEnd}}</b></div>
+          </div>
+
+          <div class="tip-stats-grid">
+             <div class="stat-line"><span>کل تسک‌ها:</span> <b>{{tip.data.total}}</b></div>
+             <div class="stat-line"><span>انجام شده:</span> <b>{{tip.data.done}}</b></div>
+          </div>
+
+          <div class="tip-progress-container">
+            <div class="tip-progress-fill" :style="{width: tip.data.percent+'%', backgroundColor: 'var(--color-primary)'}"></div>
+          </div>
+          <div class="tip-final-percent" :style="{color: LEVEL_COLORS[tip.data.level]}">{{tip.data.percent}}% بازدهی</div>
         </div>
       </div>
-      <div class="tip-arrow"></div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* ... استایل‌ها بدون تغییر ... */
-/* کارت‌ها */
-.stat-card{
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  padding: 1rem;
-  text-align: center;
-  display: grid;
-  grid-template-rows: auto auto auto;
-  gap: .35rem;
-  transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.stat-card:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 6px 26px rgba(0,0,0,.06);
-  border-color: var(--color-border-hover);
-}
-.stat-icon{
-  width: 36px; height: 36px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 10px;
-  margin: 0 auto .25rem auto;
-}
-.stat-value{ color: var(--color-heading); font-weight: 800; font-size: 1.2rem; }
-.stat-label{ font-size: .75rem; color: var(--color-text-secondary); }
+.stats-page { background-color: var(--color-background); min-height: 100vh; padding: 1.5rem; direction: rtl; color: var(--color-text); }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.tab-box { display: flex; background: var(--color-background-soft); padding: 4px; border-radius: 12px; border: 1px solid var(--color-border); }
+.t-btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: bold; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px; border: none; background: transparent; cursor: pointer; transition: 0.2s; }
+.t-btn.active { background: var(--color-background); color: var(--color-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.s-icon { width: 14px; height: 14px; }
 
-/* سلول‌های هیت‌مپ – انیمیشن ظریف */
-.hm-cell{
-  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
-  will-change: transform, filter;
-}
-.hm-cell:hover{
-  transform: scale(1.08);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.08));
-}
-.hm-cell:active{
-  transform: scale(0.98);
-}
+.stats-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: var(--color-background-soft); border: 1px solid var(--color-border); padding: 1.25rem; border-radius: 16px; text-align: center; }
+.stat-v { font-size: 1.5rem; font-weight: 900; color: var(--color-heading); }
+.stat-l { font-size: 10px; color: var(--color-text-secondary); font-weight: bold; margin-top: 4px; }
 
-/* ⬅️ نشانگر بصری برای روز جاری */
-.today-cell {
-  box-shadow: 0 0 0 2px var(--color-primary); 
-}
+.main-panel { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: 24px; padding: 1.5rem; }
 
+/* Heatmap Logic */
+.heatmap-scroll { overflow-x: auto; padding: 1rem 0; }
+.heatmap-inner { display: flex; gap: 10px; min-width: max-content; padding-top: 25px; }
+.days-labels { display: grid; grid-template-rows: repeat(7, 14px); gap: 2px; }
+.days-labels span { font-size: 9px; color: var(--color-text-secondary); height: 14px; display: flex; align-items: center; font-weight: bold; }
+.grid-container { position: relative; }
+.months-row { position: absolute; top: -22px; left: 0; right: 0; }
+.months-row span { font-size: 10px; font-weight: 800; color: var(--color-text-secondary); text-align: center; white-space: nowrap; }
+.cell { width: 14px; height: 14px; border-radius: 3px; border: none; cursor: pointer; transition: transform 0.1s; border: 1px solid rgba(0,0,0,0.05); }
+.cell:hover { transform: scale(1.3); z-index: 5; }
+.today-cell { outline: 2.5px solid var(--color-primary); outline-offset: 1.5px; }
 
-/* Tooltip */
-.tip-box{
-  background: var(--color-background);
-  color: var(--color-text);
-}
-.tip-inner{
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
-}
-.tip-arrow{
-  width: 10px; height: 10px;
-  background: var(--color-background-soft);
-  border-left: 1px solid var(--color-border);
-  border-top: 1px solid var(--color-border);
-  transform: rotate(45deg);
-  margin: -5px auto 0 auto;
-  box-shadow: -3px -3px 15px rgba(0,0,0,.03);
-}
+/* Weekly Grid (Responsive) */
+.weekly-view-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 12px; }
+.week-node { aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); transition: transform 0.2s; }
+.week-node:hover { transform: translateY(-3px); }
+.week-pct-label { font-size: 11px; font-weight: 900; color: rgba(0,0,0,0.4); }
+.week-node.curr { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 
-/* Progress Fill (gradient) */
-.progress-fill{
-  background-image: linear-gradient(90deg, #34D399, #10B981);
-}
+/* Monthly Cards & Sparkline */
+.monthly-view-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1.5rem; }
+.month-node { background: var(--color-background); padding: 1.5rem; border-radius: 20px; border: 1px solid var(--color-border); border-bottom: 5px solid transparent; cursor: pointer; transition: all 0.3s; }
+.month-node:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+.mo-info { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+.sparkline-box { height: 35px; margin: 10px 0; }
+.sparkline-svg { width: 100%; height: 100%; overflow: visible; }
+.mo-bar { height: 8px; background: var(--color-background-soft); border-radius: 4px; overflow: hidden; }
+.mo-bar div { height: 100%; transition: width 1s; }
+.mo-pct-footer { font-size: 11px; font-weight: 900; margin-top: 10px; text-align: left; }
 
-/* کاهش حرکت */
-@media (prefers-reduced-motion: reduce){
-  *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
+/* Legend */
+.legend-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; font-size: 11px; font-weight: bold; color: var(--color-text-secondary); }
+.legend-colors { display: flex; gap: 4px; }
+.legend-colors div { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.05); }
+
+/* Tooltip & RTL Styles */
+.tip-root { position: fixed; z-index: 9999; direction: rtl; pointer-events: none; }
+.tip-root.is-mobile {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: auto;
+  background: rgba(0,0,0,0.1);
 }
+.tip-card-final { 
+  background: var(--color-background); 
+  border: 1px solid var(--color-border); 
+  padding: 20px; 
+  border-radius: 24px; 
+  min-width: 250px; 
+  pointer-events: auto;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+}
+.tip-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.tip-status-dot { width: 12px; height: 12px; border-radius: 50%; }
+.tip-title-text { font-weight: 900; font-size: 15px; color: var(--color-heading); flex-grow: 1; }
+.tip-close-x { background: transparent; border: none; cursor: pointer; color: var(--color-text-secondary); }
+
+.tip-dates-area { background: var(--color-background-soft); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--color-border); }
+.date-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.date-row span { color: var(--color-text-secondary); }
+
+.tip-stats-grid { margin-bottom: 15px; }
+.stat-line { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--color-border); }
+.stat-line:last-child { border-bottom: none; }
+
+.tip-progress-container { height: 8px; background: var(--color-background-soft); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.tip-progress-fill { height: 100%; transition: width 0.6s ease-out; }
+.tip-final-percent { text-align: left; font-size: 13px; font-weight: 900; }
+
+.fade-in { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.custom-scroll::-webkit-scrollbar { height: 5px; }
+.custom-scroll::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
 </style>

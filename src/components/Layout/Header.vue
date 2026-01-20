@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import {
-  Home, Calendar, CalendarDays, CalendarRange, CalendarClock,
+  Home, Calendar, CalendarDays, CalendarRange, CalendarClock,BarChart3,
   Menu, Bell, X, Settings, LogOut, 
   Shield // 🌟 آیکون جدید: برای لینک ادمین
 } from 'lucide-vue-next'
@@ -120,8 +120,8 @@ const navigationLinks = computed(() => {
     const links = [
       { to: '/day',   label: 'نمای روزانه',  icon: CalendarClock, routeName: 'day'   },
       { to: '/week',  label: 'نمای هفتگی',   icon: CalendarDays,  routeName: 'week'  },
-      { to: '/month', label: 'نمای ماهانه',  icon: CalendarRange, routeName: 'month' },
-      { to: '/year',  label: 'نمای سالانه',  icon: Calendar,      routeName: 'year'  },
+      // { to: '/month', label: 'نمای ماهانه',  icon: CalendarRange, routeName: 'month' },
+      { to: '/year',  label: 'گزارشات',  icon: BarChart3,      routeName: 'year'  },
       { to: '/goals', label: 'اهداف',        icon: Home,          routeName: 'goals' },
       { to: '/settings', label: 'تنظیمات',   icon: Settings,      routeName: 'settings' }
     ];
