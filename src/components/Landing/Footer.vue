@@ -5,9 +5,9 @@
       {{ t('footer.text') }}
     </p>
 
-    <p class="text-xs opacity-40">
-      v1.0 — Crafted with ❤️ & Vue + Laravel
-    </p>
+<!--    <p class="text-xs opacity-40">-->
+<!--      v1.0 — Crafted with ❤️ & Vue + Laravel-->
+<!--    </p>-->
 
   </footer>
 </template>

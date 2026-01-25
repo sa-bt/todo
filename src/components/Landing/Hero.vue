@@ -1,12 +1,13 @@
 <template>
   <section id="home" class="surface relative py-24 overflow-hidden min-h-screen flex items-center">
-    
+
+    <!-- آیکون‌های شناور -->
     <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
       <div v-for="(icon, index) in bubbleIcons" :key="index"
            class="absolute animate-float-spin opacity-60"
-           :style="{ 
-             left: icon.x + '%', 
-             top: icon.y + '%', 
+           :style="{
+             left: icon.x + '%',
+             top: icon.y + '%',
              animationDuration: icon.duration + 's',
              animationDelay: icon.delay + 's',
              width: icon.size + 'px',
@@ -16,13 +17,17 @@
       </div>
     </div>
 
+    <!-- محتوای اصلی -->
     <div
-        class="max-w-7xl mx-auto px-6 md:px-16 grid grid-cols-1 md:grid-cols-2 gap-14 items-center w-full relative z-10"
-        :class="isFa ? 'rtl' : 'ltr'"
+      class="max-w-7xl mx-auto px-6 md:px-16 grid grid-cols-1 md:grid-cols-2 gap-14 items-center w-full relative z-10 overflow-x-hidden"
+      :class="isFa ? 'rtl' : 'ltr'"
     >
+
+      <!-- کارت متن -->
       <div
-          class="flex flex-col gap-4 min-h-[450px] p-8 md:p-10 rounded-3xl backdrop-blur-[8px] bg-white/[0.03] border border-white/10 shadow-2xl shadow-black/5"
-          :class="isFa ? 'text-right items-start rtl-space' : 'text-left items-start ltr-space'"
+        class="flex flex-col gap-4 p-8 md:p-10 rounded-3xl backdrop-blur-[8px] bg-white/[0.03] border border-white/10 shadow-2xl shadow-black/5 min-h-[450px]
+               w-full md:w-auto"
+        :class="isFa ? 'text-right items-start rtl-space' : 'text-left items-start ltr-space'"
       >
         <transition name="fade-slide">
           <div v-if="step >= 1">
@@ -34,15 +39,15 @@
 
         <transition name="fade-slide">
           <div v-if="step >= 2">
-           <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent gradient-text">
-  {{ t('hero.intro') }}
-</h2>
+            <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent gradient-text">
+              {{ t('hero.intro') }}
+            </h2>
           </div>
         </transition>
 
         <transition name="fade-slide">
           <div v-if="step >= 3">
-            <p class="text-lg text-text-secondary leading-relaxed max-w-lg">
+            <p class="text-lg text-text-secondary leading-relaxed max-w-full md:max-w-lg">
               {{ t('hero.role') }}
             </p>
             <p class="text-lg text-text-secondary mb-6 mt-2">
@@ -53,16 +58,19 @@
 
         <transition name="fade-slide">
           <div v-if="step >= 4" class="w-full mt-2">
-            <div class="flex gap-4 w-full" :class="isFa ? 'flex-row-reverse justify-end' : 'flex-row justify-start'">
-              <a href="#projects" class="btn hero-btn-primary"> {{ t('hero.cta_projects') }} </a>
-              <a href="#contact" class="btn hero-btn-ghost"> {{ t('hero.cta_contact') }} </a>
+            <div class="flex gap-4 flex-wrap md:flex-nowrap w-full"
+                 :class="isFa ? 'flex-row-reverse justify-end' : 'flex-row justify-start'">
+              <a href="#projects" class="btn hero-btn-primary w-full md:w-auto text-center"> {{ t('hero.cta_projects') }} </a>
+              <a href="#contact" class="btn hero-btn-ghost w-full md:w-auto text-center"> {{ t('hero.cta_contact') }} </a>
             </div>
           </div>
         </transition>
       </div>
 
-      <div class="relative flex justify-center items-center w-full h-[450px]">
-        <div class="relative z-10 w-full max-w-md bg-[#300a24]/95 backdrop-blur-xl rounded-xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden transform hover:scale-[1.01] transition-transform duration-500">
+      <!-- ترمینال شبیه‌سازی -->
+      <div class="relative flex justify-center items-center w-full h-[450px] md:h-[450px] mt-10 md:mt-0">
+        <div class="relative z-10 w-full max-w-md bg-[#300a24]/95 backdrop-blur-xl rounded-xl shadow-[0_30px_100px_rgba(0,0,0,0.5)]
+                    border border-white/10 overflow-hidden transform hover:scale-[1.01] transition-transform duration-500">
           <div class="flex items-center justify-between px-4 py-2 bg-[#481439] border-b border-white/5">
             <div class="flex gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
@@ -71,14 +79,14 @@
             </div>
             <span class="text-[10px] text-gray-400 font-mono tracking-widest uppercase">AhmadBakhshian.vue</span>
           </div>
-          
-          <div class="p-6 font-mono text-[11px] md:text-[13px] h-[280px] md:h-[320px] text-left ltr overflow-y-auto custom-scrollbar bg-black/30">
+
+          <div class="p-4 md:p-6 font-mono text-[11px] md:text-[13px] h-[280px] md:h-[320px] text-left ltr overflow-y-auto custom-scrollbar bg-black/30">
             <div class="text-[#87d5a2] mb-3 font-bold">ahmad@ubuntu:~$ <span class="text-white font-normal opacity-80">npm run dev</span></div>
             <div class="whitespace-pre-wrap leading-relaxed text-[#fce94f]">
               {{ currentText }}<span class="w-2 h-4 bg-orange-500 animate-pulse inline-block align-middle ml-1"></span>
             </div>
             <div v-if="step === 4" class="mt-4 text-cyan-400 text-[10px] font-bold animate-pulse">
-               > [READY] Landing Page Mounted.
+              > [READY] Landing Page Mounted.
             </div>
           </div>
         </div>
@@ -143,12 +151,22 @@ onMounted(() => {
   startCoding()
 })
 </script>
+
 <style scoped>
-/* --- تنظیمات عمومی بخش متن --- */
+/* موبایل */
+@media (max-width: 768px) {
+  .surface { overflow-x: hidden !important; }
+  .rtl-space, .ltr-space { text-align: center; items-align: center; }
+  .gradient-text { font-size: 2rem !important; }
+  .btn { width: 100% !important; justify-content: center; text-align: center; }
+  .h-[450px] { height: auto !important; min-height: 400px; }
+}
+
+/* بقیه استایل‌ها مثل قبلی */
 .rtl-space p { margin-left: 0 !important; margin-right: 0 !important; }
 .ltr-space p { margin-right: 0 !important; }
 
-/* --- انیمیشن اختصاصی گرادیانت متنی (هندلینگ LTR/RTL) --- */
+/* گرادیانت متن */
 .gradient-text {
   background-size: 200% auto;
   display: inline-block;
@@ -156,91 +174,31 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* استایل و انیمیشن برای زبان انگلیسی (چپ به راست) */
 .ltr .gradient-text {
   background-image: linear-gradient(to right, var(--color-primary), var(--color-accent), var(--color-primary));
   animation: move-right 4s linear infinite;
 }
-
-/* استایل و انیمیشن برای زبان فارسی (راست به چپ) */
 .rtl .gradient-text {
   background-image: linear-gradient(to left, var(--color-primary), var(--color-accent), var(--color-primary));
   animation: move-left 4s linear infinite;
 }
 
-@keyframes move-right {
-  0% { background-position: 0% center; }
-  100% { background-position: -200% center; }
-}
+@keyframes move-right { 0% { background-position: 0% center; } 100% { background-position: -200% center; } }
+@keyframes move-left { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
 
-@keyframes move-left {
-  0% { background-position: 0% center; }
-  100% { background-position: 200% center; }
-}
+.hero-btn-primary { background: var(--color-primary); color: white; padding: 0.7rem 1.6rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(var(--color-primary-rgb), 0.3); font-weight: 700; transition: all 0.3s ease; display: inline-block; }
+.hero-btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(var(--color-primary-rgb), 0.5); }
+.hero-btn-ghost { border: 2px solid var(--color-primary); padding: 0.7rem 1.6rem; border-radius: 12px; transition: all 0.3s ease; color: var(--color-primary); font-weight: 700; display: inline-block; }
+.hero-btn-ghost:hover { background: var(--color-primary); color: white !important; transform: translateY(-3px); }
 
-/* --- دکمه‌ها با استایل اورجینال --- */
-.hero-btn-primary {
-  background: var(--color-primary);
-  color: white;
-  padding: 0.7rem 1.6rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(var(--color-primary-rgb), 0.3);
-  font-weight: 700;
-  transition: all 0.3s ease;
-  display: inline-block;
-}
+.animate-float-spin { animation: float-spin linear infinite; }
+@keyframes float-spin { 0% { transform: translate(0,0) rotate(0deg); } 25% { transform: translate(40px,-30px) rotate(90deg); } 50% { transform: translate(0,-60px) rotate(180deg); } 75% { transform: translate(-40px,-30px) rotate(270deg); } 100% { transform: translate(0,0) rotate(360deg); } }
 
-.hero-btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 35px rgba(var(--color-primary-rgb), 0.5);
-}
+.fade-slide-enter-active { transition: all 0.8s ease-out; }
+.fade-slide-enter-from { opacity: 0; transform: translateY(20px); }
 
-.hero-btn-ghost {
-  border: 2px solid var(--color-primary);
-  padding: 0.7rem 1.6rem;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  color: var(--color-primary);
-  font-weight: 700;
-  display: inline-block;
-}
-
-.hero-btn-ghost:hover {
-  background: var(--color-primary);
-  color: white !important;
-  transform: translateY(-3px);
-}
-
-/* --- انیمیشن آیکون‌های شناور و چرخشی --- */
-.animate-float-spin {
-  animation: float-spin linear infinite;
-}
-
-@keyframes float-spin {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(40px, -30px) rotate(90deg); }
-  50% { transform: translate(0, -60px) rotate(180deg); }
-  75% { transform: translate(-40px, -30px) rotate(270deg); }
-  100% { transform: translate(0, 0) rotate(360deg); }
-}
-
-/* --- انیمیشن Mount المان‌ها (جایگزین AOS) --- */
-.fade-slide-enter-active {
-  transition: all 0.8s ease-out;
-}
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-/* --- استایل‌های ترمینال و اسکرول‌بار --- */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 3px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #481439;
-  border-radius: 10px;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #481439; border-radius: 10px; }
 
 .ltr { direction: ltr; text-align: left; }
 .rtl { direction: rtl; text-align: right; }

@@ -1,12 +1,10 @@
 <template>
   <section id="skills" class="py-32 relative">
-
     <div class="max-w-7xl mx-auto px-6 md:px-12">
 
-      <!-- عنوان -->
       <h2
-          class="text-4xl font-extrabold text-[var(--color-heading)] mb-14 text-center tracking-tight"
-          data-aos="fade-up"
+        class="text-4xl font-extrabold text-[var(--color-heading)] mb-14 text-center tracking-tight"
+        data-aos="fade-up"
       >
         {{ t('skills.title') }}
       </h2>
@@ -14,45 +12,54 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
 
         <div
-            v-for="skill in skillsList"
-            :key="skill.key"
-            class="skill-card relative py-8 px-7 rounded-3xl
-              bg-white/10 backdrop-blur-xl
-              border border-white/20
-              shadow-[0_10px_40px_rgba(0,0,0,0.25)]
-              transition-all duration-500
-              hover:shadow-[0_20px_50px_rgba(0,0,0,0.40)]
-              cursor-pointer will-change-transform"
-            :data-skill="skill.key"
-            data-aos="fade-up"
-            @mousemove="tilt($event, skill.key)"
-            @mouseleave="resetTilt(skill.key)"
+          v-for="skill in skillsList"
+          :key="skill.key"
+          class="skill-card relative py-8 px-7 rounded-3xl
+                 bg-white/10 backdrop-blur-xl
+                 border border-white/20
+                 shadow-[0_10px_40px_rgba(0,0,0,0.25)]
+                 transition-all duration-500
+                 hover:shadow-[0_20px_50px_rgba(0,0,0,0.40)]
+                 cursor-pointer will-change-transform"
+          :data-skill="skill.key"
+          data-aos="fade-up"
+          @mousemove="tilt($event)"
+          @mouseleave="resetTilt($event)"
         >
 
-          <!-- حلقه نور دور آیکون -->
+          <!-- Glow -->
           <div class="absolute inset-0 flex justify-center mt-6 pointer-events-none">
-            <div class="w-20 h-20 rounded-full opacity-40 blur-xl bg-[var(--color-primary)] transition-all duration-700 group-hover:opacity-60"></div>
+            <div
+              class="w-20 h-20 rounded-full opacity-40 blur-xl
+                     bg-[var(--color-primary)]
+                     transition-all duration-700"
+            ></div>
           </div>
 
-          <!-- آیکون -->
+          <!-- Icon -->
           <div class="flex justify-center mb-4 relative z-10">
             <component
-                :is="icons[skill.key]"
-                class="w-10 h-10 text-[var(--color-primary)] transition-all duration-500 group-hover:scale-110"
+              :is="icons[skill.key] ?? Box"
+              class="w-10 h-10 text-[var(--color-primary)]
+                     transition-transform duration-500
+                     group-hover:scale-110"
             />
           </div>
 
-          <!-- عنوان وسط -->
-          <h3 class="font-semibold text-xl text-[var(--color-heading)] tracking-tight text-center mb-5 relative z-10">
+          <!-- Title -->
+          <h3
+            class="font-semibold text-xl text-[var(--color-heading)]
+                   tracking-tight text-center mb-5 relative z-10"
+          >
             {{ skill.title }}
           </h3>
 
-          <!-- آیتم‌ها به صورت Chip -->
+          <!-- Items -->
           <div class="flex flex-wrap justify-center gap-2 mb-6 relative z-10">
             <div
-                v-for="(item, idx) in skill.items"
-                :key="idx"
-                class="px-3 py-1.5 rounded-full text-xs
+              v-for="(item, idx) in skill.items"
+              :key="idx"
+              class="px-3 py-1.5 rounded-full text-xs
                      bg-white/20 backdrop-blur-md
                      border border-white/30
                      text-[var(--color-heading)]
@@ -63,25 +70,16 @@
             </div>
           </div>
 
-          <!-- Progress Line با Shine -->
-          <div class="w-full relative z-10">
-            <div class="h-2 rounded-full bg-white/25 overflow-hidden relative">
-
-              <!-- خط اصلی progress -->
+          <!-- Progress -->
+          <div class="relative z-10">
+            <div class="h-2 rounded-full bg-white/25 overflow-hidden">
               <div
-                  class="h-full rounded-full bg-gradient-to-r
+                class="h-full rounded-full bg-gradient-to-r
                        from-[var(--color-primary)]
                        to-[var(--color-accent)]
                        transition-all duration-300 ease-out"
-                  :style="{ width: animatedPercents[skill.key] + '%' }"
+                :style="{ width: animatedPercents[skill.key] + '%' }"
               ></div>
-
-              <!-- Shine -->
-              <div
-                  class="absolute inset-0 shine pointer-events-none"
-                  :style="{ transform: `translateX(${animatedPercents[skill.key]}%)` }"
-              ></div>
-
             </div>
 
             <p class="text-sm mt-2 text-text-secondary text-center">
@@ -92,52 +90,58 @@
         </div>
 
       </div>
-
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, reactive, onMounted } from 'vue'
+import { computed, reactive, onMounted, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-
 import {
-  Code, Layers, Monitor, Server, Box, Wrench
+  Code, Layers, Monitor, Server, Wrench, Database, Box
 } from 'lucide-vue-next'
 
 const { t, tm } = useI18n()
 
-const keys = ['backend', 'frontend', 'ux', 'devops', 'system', 'tools']
+/* ===== Data from JSON ===== */
+const skillsData = tm('skills')
 
-const skillsList = computed(() =>
-    keys.map(key => {
-      const data = tm(`skills.${key}`)
-      return {
-        key,
-        title: data.title,
-        items: data.items,
-        percent: data.percent
-      }
-    })
+const keys = computed(() =>
+  Object.keys(skillsData).filter(k => k !== 'title')
 )
 
+const skillsList = computed(() =>
+  keys.value.map(key => ({
+    key,
+    title: skillsData[key].title,
+    items: skillsData[key].items,
+    percent: skillsData[key].percent
+  }))
+)
+
+/* ===== Icons ===== */
 const icons = {
   backend: Code,
   frontend: Layers,
   ux: Monitor,
   devops: Server,
-  system: Box,
+  database: Database,
   tools: Wrench
 }
 
-const animatedPercents = reactive({
-  backend: 0, frontend: 0, ux: 0, devops: 0, system: 0, tools: 0
-})
-const animatedFlags = reactive({
-  backend: false, frontend: false, ux: false, devops: false, system: false, tools: false
+/* ===== Animated percent ===== */
+const animatedPercents = reactive({})
+const animatedFlags = reactive({})
+
+watchEffect(() => {
+  keys.value.forEach(key => {
+    if (!(key in animatedPercents)) {
+      animatedPercents[key] = 0
+      animatedFlags[key] = false
+    }
+  })
 })
 
-// 🔥 Counter و Progress animation
 function animatePercent(key, target) {
   if (animatedFlags[key]) return
   animatedFlags[key] = true
@@ -157,8 +161,8 @@ function animatePercent(key, target) {
   }, interval)
 }
 
-// 🔥 Tilt effect
-function tilt(event, key) {
+/* ===== Mild tilt (مثل قبل) ===== */
+function tilt(event) {
   const card = event.currentTarget
   const rect = card.getBoundingClientRect()
 
@@ -179,43 +183,33 @@ function tilt(event, key) {
   `
 }
 
-function resetTilt(key) {
-  const cards = document.querySelectorAll(`.skill-card[data-skill="${key}"]`)
-  cards.forEach(c => (c.style.transform = 'perspective(900px) rotateX(0) rotateY(0)'))
+function resetTilt(event) {
+  event.currentTarget.style.transform =
+    'perspective(900px) rotateX(0) rotateY(0) translateY(0)'
 }
 
+/* ===== Observer ===== */
 onMounted(() => {
   const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.intersectionRatio >= 0.9) {
-            const key = entry.target.getAttribute('data-skill')
-            const skill = skillsList.value.find(s => s.key === key)
-            animatePercent(key, skill.percent)
-          }
-        })
-      },
-      { threshold: 0.9 }
+    entries => {
+      entries.forEach(entry => {
+        if (entry.intersectionRatio >= 0.9) {
+          const key = entry.target.dataset.skill
+          const skill = skillsList.value.find(s => s.key === key)
+          if (skill) animatePercent(key, skill.percent)
+        }
+      })
+    },
+    { threshold: 0.9 }
   )
 
-  setTimeout(() => {
-    document.querySelectorAll('.skill-card')
-        .forEach(el => observer.observe(el))
-  }, 300)
+  document.querySelectorAll('.skill-card')
+    .forEach(el => observer.observe(el))
 })
 </script>
+
 <style scoped>
-.shine {
-  background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255,255,255,0.7),
-      transparent
-  );
-  width: 120px;
-  height: 100%;
-  filter: blur(8px);
-  opacity: 0.35;
-  transition: transform 0.2s linear;
+.skill-card {
+  transform-style: preserve-3d;
 }
 </style>

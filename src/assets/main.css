@@ -87,3 +87,8 @@
     background: color-mix(in oklab, var(--color-border) 60%, var(--color-text) 40%);
     border-radius: 8px;
 }
+:root {
+    --logo-grad-start: var(--color-primary);
+    --logo-grad-end: var(--color-accent);
+}
+
