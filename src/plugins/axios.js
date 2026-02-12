@@ -31,7 +31,7 @@ api.interceptors.response.use(
         // برای اطمینان از دسترسی به store در context خارج از Vue component
         const auth = useAuthStore(pinia)
         auth.logout()
-        router.replace("/login")
+        router.replace("/vorod")
       }
     }
     // اگر 403 (Forbidden) بود (مثلاً ادمین نیست) هم می‌توان آن را هندل کرد،
