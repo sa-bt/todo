@@ -1,134 +1,131 @@
 {
   "nav": {
     "home": "Home",
-    "about": "About",
+    "about": "About Me",
     "skills": "Skills",
-    "projects": "Projects",
+    "projects": "Experience",
     "contact": "Contact"
   },
   "hero": {
-    "greeting": "Hey there! 👋",
-    "intro": "I’m Ahmad Bakhshian",
-    "role": "Full-stack developer focused on building scalable educational and productivity apps.",
-    "motto": "I love turning complex ideas into simple, delightful experiences.",
-    "cta_projects": "View Projects",
-    "cta_contact": "Contact Me"
+    "greeting": "Hello! 👋",
+    "intro": "I'm Ahmad Bakhshiyan",
+    "role": "Backend Developer & a little🤟 Frontend",
+    "motto": "Challenges are where I thrive 🔥",
+    "cta_projects": "Check out my projects 🚀",
+    "cta_contact": "Get in touch 🤝"
   },
   "about": {
     "title": "About Me",
-    "text": "I'm Ahmad — a developer who loves blending system thinking with clean user-centered design. Since 2018, I've been building scalable and maintainable applications with Laravel and Vue, especially in educational, financial, and management platforms.",
-    "years": "Years Experience",
+    "text": "I'm Ahmad (Pourya from PMPIran). Someone who enjoys facing technical challenges and believes good software is a combination of solid logic and great user experience. Lately, I've been trying to turn this belief into code using Laravel and Vue.",
+    "years": "Years of Experience",
     "projects": "Successful Projects",
-    "goal": "My goal is to build meaningful and beautiful software.",
-    "skill_backend": "Backend Dev",
-    "skill_frontend": "Frontend Dev",
-    "skill_design": "UI/UX Design"
-
-  },"skills": {
-  "title": "Skills",
-
-  "backend": {
-    "title": "Backend Development",
-    "percent": 80,
-    "items": ["Laravel", "MySQL",  "REST API"]
+    "goal": "Coding isn't just writing commands; it's building solutions😉.",
+    "skill_backend": "Backend Development",
+    "skill_frontend": "Frontend Development",
+    "skill_design": "UI/UX"
   },
-
-  "frontend": {
-    "title": "Frontend Development",
-    "percent": 70,
-    "items": ["Vue.js", "TailwindCSS", "SPA / PWA"]
-  },
-
-  "ux": {
-    "title": "UX / UI Design",
-    "percent": 50,
-    "items": ["User Flow", "Wireframes", "Microinteractions"]
-  },
-
-  "devops": {
-    "title": "DevOps",
-    "percent": 55,
-    "items": ["Docker", "Linux", "CI/CD"]
-  },
-
-  "system": {
-    "title": "System Design",
-    "percent": 65,
-    "items": ["Scalability", "Clean Architecture", "Caching"]
-  },
-
-  "tools": {
-    "title": "Tools & Workflow",
-    "percent": 60,
-    "items": ["Git", "Figma", "Postman"]
-  }
-}
-,"experience": {
-  "title": "Work Experience",
-  "items": [
-    {
-      "role": "FullStack Developer",
-      "company": "PMPiran",
-      "period": "Jul 2022 – Present",
-      "desc": "Building a large-scale modular educational system, integrating Google Shared Calendar, multi-channel notifications, and credit-based payment flows."
+  "skills": {
+    "title": "Skills",
+    "backend": {
+      "title": "Backend Development",
+      "percent": 70,
+      "items": ["Laravel", "PHP", "REST API"]
     },
-    {
-      "role": "PHP Developer",
-      "company": "Rayan Andish Sepanta",
-      "period": "Dec 2021 – Jun 2022",
-      "desc": "Developing REST APIs, database optimization, and implementing backend modules for enterprise projects."
+    "frontend": {
+      "title": "Modern Frontend",
+      "percent": 60,
+      "items": ["Vue.js", "TailwindCSS", "SPA / PWA"]
     },
-    {
-      "role": "PHP Developer",
-      "company": "Vafur Mehr Kamyar",
-      "period": "Mar 2021 – Sep 2021",
-      "desc": "Developing service-oriented web applications and maintaining backend systems."
+    "database": {
+      "title": "Database",
+      "percent": 60,
+      "items": ["MYSQL", "Database Design", "Indexing"]
     },
-    {
-      "role": "PHP Developer",
-      "company": "Pars Fanavaran Mobtaker",
-      "period": "Sep 2020 – Feb 2021",
-      "desc": "Frontend-backend integration and building custom business modules."
+    "devops": {
+      "title": "DevOps",
+      "percent": 45,
+      "items": ["Docker", "Linux", "CI/CD"]
     },
-    {
-      "role": "PHP Developer",
-      "company": "Memaran Fanavari Hoshmand",
-      "period": "Dec 2019 – Sep 2020",
-      "desc": "Backend development for company software and collaboration in multiple web projects."
+    "system": {
+      "title": "System Design",
+      "percent": 60,
+      "items": ["Scalability", "Clean Architecture", "Caching"]
+    },
+    "tools": {
+      "title": "Tools",
+      "percent": 60,
+      "items": ["Git", "Trello", "Postman"]
     }
-  ]
-},
-
-  "projects": {
-    "title": "Projects",
-    "todo": {
-      "name": "Todo App",
-      "desc": "Personal productivity app with goal reminders and daily progress tracking."
-    },
-    "pmpiran": {
-      "name": "PMPiran CRM",
-      "desc": "Modular educational management system with shared Google Calendar, notifications, and Azkivam credit payment."
-    },
-    "notifications": {
-      "name": "System Notifications",
-      "desc": "Multi-channel notification module (Email, SMS, CRM) with queued jobs and dynamic templates."
-    },
-    "azkivam": {
-      "name": "Azkivam Integration",
-      "desc": "Full Azkivam credit payment gateway integration with secure token lifecycle and transaction tracking."
-    }
+  },
+  "experience": {
+    "title": "Work Experience",
+    "items": [
+      {
+        "role": "Full-Stack Developer",
+        "company": "PMPiran",
+        "period": "July 2022 - Present",
+        "desc": "A great place with good vibes and positive energy"
+      },
+      {
+        "role": "PHP Developer",
+        "company": "Rayan Andish Sepanta",
+        "period": "Jan 2022 - June 2022",
+        "desc": "A young and motivated team with large-scale projects"
+      },
+      {
+        "role": "PHP Developer",
+        "company": "Vofour Mehr Kamyar",
+        "period": "March 2021 - Sept 2021",
+        "desc": "A company in consulting and psychology field."
+      },
+      {
+        "role": "PHP Developer",
+        "company": "Pars Fanavaran Mobtaker",
+        "period": "Sept 2020 - Feb 2021",
+        "desc": "A company with high developer turnover due to large projects being implemented with outdated technologies."
+      },
+      {
+        "role": "PHP Developer",
+        "company": "Memaran Fanavari Hooshmand",
+        "period": "Jan 2020 - Sept 2020",
+        "desc": "My first home to start. Cool friends with big dreams"
+      }
+    ]
   },
   "contact": {
-    "title": "Contact Me",
-    "text": "If you’d like to collaborate or just talk about ideas and projects, I’d love to hear from you.",
+    "title": "Let's Talk!",
+    "text": "Whether it's starting a collaboration or just a friendly hello. I'd love to hear from you.",
     "name": "Name",
     "email": "Email",
     "message": "Your Message",
     "send": "Send Message",
-    "success": "Your message has been sent successfully 🌿",
-    "error": "Something went wrong. Please try again."
+    "success": "Your message was sent successfully 🌿",
+    "error": "Failed to send message. Please try again.",
+    "success_title": "Message Sent!",
+    "success_text": "Thank you for taking the time to reach out. We will respond as soon as possible.",
+    "send_new": "Send New Message",
+    "captcha_placeholder": "Enter the code",
+    "captcha_refresh": "Refresh Captcha"
+  },
+  "captcha": {
+    "expired": "Captcha expired, please try again.",
+    "invalid": "Invalid verification code.",
+    "load_error": "Error loading captcha",
+    "fetch_error": "Error fetching captcha"
+  },
+  "errors": {
+    "server_error": "A server communication error occurred.",
+    "validation_error": "Please fill all fields correctly.",
+    "name_required": "Name is required.",
+    "name_min": "Name must be at least 3 characters.",
+    "email_required": "Email is required.",
+    "email_invalid": "Please enter a valid email address.",
+    "message_required": "Message is required.",
+    "message_min": "Message must be at least 10 characters.",
+    "captcha_required": "Please enter the security code",
+    "captcha_invalid": "The security code you entered is invalid"
   },
   "footer": {
-    "text": "© 2025 Ahmad Bakhshian — Built with Laravel, Vue, and a lot of love 💚"
+    "text": "© 2025 Ahmad Bakhshiyan — Made with ❤️ and lots of coffee ☕"
   }
 }

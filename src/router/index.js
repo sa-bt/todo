@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router"
-import { useAuthStore } from "@/stores/auth" 
+import { useAuthStore } from "@/stores/auth"
 
 // --- 1. کامپوننت‌های Views ---
 import Login from "@/views/Login.vue"
@@ -8,10 +8,10 @@ import Register from "@/views/Register.vue"
 import Landing from "@/views/landing/index.vue"
 
 // 🌟 وارد کردن کامپوننت جدید برای دوره ها
-import AdminDashboardLayout from "@/views/admin/Dashboard.vue" 
-import AdminReports from "@/views/admin/Reports.vue"         
-import CourseList from "@/views/admin/CourseList.vue"         
-import CourseDetail from "@/views/admin/Course.vue"         
+import AdminDashboardLayout from "@/views/admin/Dashboard.vue"
+import AdminReports from "@/views/admin/Reports.vue"
+import CourseList from "@/views/admin/CourseList.vue"
+import CourseDetail from "@/views/admin/Course.vue"
 
 const NotFound = () => import("@/views/NotFound.vue")
 
@@ -27,36 +27,35 @@ import Notifications from "../views/Notifications.vue";
 const routes = [
   // مسیرهای احراز هویت (Login & Register)
   {
-    path: "/login",
+    path: "/vorod",
     name: "login",
     component: Login,
-    meta: { guest: true }, 
+    meta: { guest: true },
   },
 
   {
-    path: "/register",
+    path: "/sabtenam",
     name: "register",
     component: Register,
     meta: { guest: true },
   },
 
   {
-    path: "/landing",
+    path: "/",
     name: "landing",
     component: Landing,
-    meta: { requiresAuth: true }, 
   },
 
   // مسیرهای جدید ادمین
   {
     path: "/admin",
     name: "admin",
-    component: AdminDashboardLayout, 
-    meta: { requiresAuth: true, requiresAdmin: true }, 
+    component: AdminDashboardLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
         path: "",
-        name: "adminSummary", 
+        name: "adminSummary",
         component: { template: '<div class="p-4">خلاصه وضعیت فعلی سیستم (مثلاً نمودارهای کلیدی)</div>' },
         meta: { requiresAuth: true, requiresAdmin: true },
       },
@@ -73,7 +72,7 @@ const routes = [
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
-            path: 'course/:slug', 
+            path: 'course/:slug',
             name: 'adminCourseDetail', // 👈 نامی که در RouterLink استفاده شده است
             component: CourseDetail, // 👈 کامپوننتی که جزئیات دوره را نمایش می‌دهد
         },
@@ -85,9 +84,9 @@ const routes = [
   {
     path: "/",
     component: Dashboard,
-    meta: { requiresAuth: true }, 
+    meta: { requiresAuth: true },
     children: [
-      { path: "", redirect: { name: "day" } },
+      { path: "day", redirect: { name: "day" } },
 
       { path: "goals", name: "goals", component: GoalsTab },
       { path: "year", name: "year", component: YearTab },
@@ -102,7 +101,7 @@ const routes = [
 
   // مسیر 404
   {
-    path: '/:catchAll(.*)*', 
+    path: '/:catchAll(.*)*',
     name: 'NotFound',
     component: NotFound
   },
@@ -129,7 +128,7 @@ router.beforeEach((to, _from, next) => {
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     console.warn(`Access Denied for user ${auth.user?.name} (Role: ${auth.user?.role}) attempting to access ${to.path}`);
-    return next({ name: "goals" }) 
+    return next({ name: "goals" })
   }
 
   if (to.meta.guest && auth.isAuthenticated) {

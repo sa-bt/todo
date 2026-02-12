@@ -1,21 +1,27 @@
 {
-  "name": "Do IT",
+  "name": "Do IT - مدیریت اهداف و تسک‌ها",
   "short_name": "Do IT",
-  "description": "مدیریت تسک‌ها و اهداف روزانه",
+  "description": "اپلیکیشن مدیریت اهداف و تسک‌های روزانه",
+  "lang": "fa",
+  "dir": "rtl",
   "theme_color": "#2563EB",
   "background_color": "#ffffff",
   "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
   "start_url": "/",
   "icons": [
     {
       "src": "/pwa-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/pwa-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

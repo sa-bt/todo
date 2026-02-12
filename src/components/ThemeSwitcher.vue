@@ -1,54 +1,53 @@
+<template>
+  <!-- کانتینر: بدون سایه، با پدینگ خیلی کم و مرز بسیار نازک -->
+  <div
+      class="flex items-center gap-1 p-0.5 rounded-full surface-soft border border-token/10"
+      role="radiogroup"
+      aria-label="انتخاب تم"
+  >
+    <button
+        v-for="theme in themeOptions"
+        :key="theme.key"
+        @click="setTheme(theme.key)"
+        class="flex items-center justify-center rounded-full transition-colors duration-200 focus:outline-none"
+        :class="[
+        /* کاهش سایز دکمه‌ها: موبایل 6px، دسکتاپ 7px */
+        'w-6 h-6 md:w-7 md:h-7',
+        /* استایل فعال: فقط تغییر رنگ پس‌زمینه (بدون سایه و بزرگ شدن) */
+        isActive(theme.key)
+          ? 'bg-[var(--color-primary)] text-white'
+          : /* استایل غیرفعال: آیکون خاکستری ملایم */
+            'text-[var(--color-text-secondary)] hover:bg-[var(--color-background-mute)] hover:text-[var(--color-text)]'
+      ]"
+        :title="theme.hint"
+    >
+      <!-- آیکون: سایز کوچک و بدون انیمیشن -->
+      <component :is="theme.icon" class="w-3.5 h-3.5 md:w-4 md:h-4 pointer-events-none" />
+    </button>
+  </div>
+</template>
+
 <script setup>
 import { useThemeStore } from '@/stores/theme'
-import { Sun, Moon, Sparkles } from 'lucide-vue-next' // آیکون‌های جدید برای تم‌ها
+import { Sun, Moon, Sparkles } from 'lucide-vue-next'
 
 const themeStore = useThemeStore()
 
-// ساختار داده برای نمایش بهتر آیکون‌ها
 const themeOptions = [
   { key: 'minimal-sage', name: 'Sage', icon: Sparkles, hint: 'تم سبز روشن' },
   { key: 'minimal-sand', name: 'Sand', icon: Sun, hint: 'تم شنی روشن' },
   { key: 'dark', name: 'Dark', icon: Moon, hint: 'تم تیره' },
 ]
 
-const handleThemeChange = (key) => {
+const setTheme = (key) => {
   themeStore.setTheme(key)
+}
+
+const isActive = (key) => {
+  return themeStore.currentTheme === key
 }
 </script>
 
-<template>
-  <div
-      class="flex p-0.5 rounded-xl border border-token shadow-sm transition-colors duration-300"
-      :class="{
-      'surface-soft': themeStore.currentTheme !== 'dark', // پس زمینه روشن برای تم های روشن
-      'surface-mute': themeStore.currentTheme === 'dark' // پس زمینه کمی تیره تر برای تم دارک
-    }"
-      role="radiogroup"
-      aria-label="انتخاب تم برنامه"
-  >
-    <button
-        v-for="theme in themeOptions"
-        :key="theme.key"
-        @click="handleThemeChange(theme.key)"
-        :aria-checked="themeStore.currentTheme === theme.key"
-        role="radio"
-        :title="theme.hint"
-        class="flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 relative focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 tap-target"
-        :class="{
-        // حالت فعال (انتخاب شده)
-        'text-white shadow-md transform': themeStore.currentTheme === theme.key,
-        // حالت غیرفعال
-        'text-text-secondary hover:text-text hover:bg-transparent': themeStore.currentTheme !== theme.key
-      }"
-        :style="{
-        // اعمال رنگ اصلی فقط برای دکمه فعال
-        backgroundColor: themeStore.currentTheme === theme.key ? 'var(--color-primary)' : 'transparent',
-        // رنگ آیکون در حالت غیر فعال
-        color: themeStore.currentTheme !== theme.key ? 'var(--color-text-secondary)' : 'white',
-      }"
-    >
-      <component :is="theme.icon" class="w-4 h-4 flex-shrink-0" />
-      <span class="hidden sm:inline">{{ theme.name }}</span>
-    </button>
-  </div>
-</template>
+<style scoped>
+/* استایل خاصی نیاز نیست، همه چیز با Tailwind هندل شده */
+</style>

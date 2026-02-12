@@ -1,7 +1,7 @@
 <template>
   <button
       @click="toggleLang"
-      class="text-sm px-3 py-1 border rounded-full transition-all hover:bg-[var(--color-primary)] hover:text-white"
+      class="text-xs sm:text-sm font-medium px-2 py-1 rounded border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
   >
     {{ currentLang === 'fa' ? 'EN' : 'فا' }}
   </button>
@@ -9,8 +9,10 @@
 
 <script setup>
 import { useI18n } from 'vue-i18n'
-import { watch, onMounted } from 'vue'
-import { nextTick } from 'vue'
+import { watch, onMounted, nextTick } from 'vue'
+
+const { locale } = useI18n()
+const currentLang = locale
 
 const toggleLang = async () => {
   currentLang.value = currentLang.value === 'fa' ? 'en' : 'fa'
@@ -19,12 +21,6 @@ const toggleLang = async () => {
   applyLangSettings()
 }
 
-const { locale } = useI18n()
-const currentLang = locale
-
-// تغییر زبان و ذخیره در localStorage
-
-// تابع اعمال تنظیمات راست‌چین/چپ‌چین و فونت
 const applyLangSettings = () => {
   const html = document.documentElement
   if (currentLang.value === 'fa') {
@@ -36,17 +32,13 @@ const applyLangSettings = () => {
   }
 }
 
-// بازیابی زبان ذخیره‌شده
 onMounted(() => {
   const saved = localStorage.getItem('lang')
-  if (saved && saved !== currentLang.value) currentLang.value = saved
+  if (saved && saved !== currentLang.value) {
+    currentLang.value = saved
+  }
   applyLangSettings()
 })
 
-// واکنش به تغییر زبان
 watch(currentLang, applyLangSettings)
 </script>
-
-<style>
-
-</style>

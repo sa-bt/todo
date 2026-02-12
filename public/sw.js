@@ -7,12 +7,12 @@
 const precachedAssets = self.__WB_MANIFEST || [];
 
 // استفاده از BUILD_HASH تزریقی از Vite برای جلوگیری از تداخل کش
-const BUILD_HASH = self.BUILD_HASH || Date.now().toString(); 
+const BUILD_HASH = self.BUILD_HASH || Date.now().toString();
 const CACHE_STATIC_ASSETS = 'todo-app-assets-v' + BUILD_HASH;
 
 // فایل‌های پایه که همیشه باید در کش باشند
 const customUrlsToCache = [
-  '/', 
+  '/',
   '/manifest.webmanifest',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
@@ -28,12 +28,12 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_STATIC_ASSETS)
             .then((cache) => {
                 console.log('Installing new SW version:', BUILD_HASH);
-                
+
                 // کش کردن آدرس‌های دستی
                 cache.addAll(customUrlsToCache);
-                
+
                 // کش کردن فایل‌های بیلد شده (index.html, JS, CSS و غیره)
-                const urlsFromManifest = precachedAssets.map(asset => 
+                const urlsFromManifest = precachedAssets.map(asset =>
                     typeof asset === 'string' ? asset : asset.url
                 );
                 return cache.addAll(urlsFromManifest.filter(url => url));
@@ -56,7 +56,7 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim()) 
+        }).then(() => self.clients.claim())
     );
 });
 
@@ -80,40 +80,55 @@ self.addEventListener('fetch', (event) => {
 /**
  * رویداد Push: مدیریت اعلان‌ها با پشتیبانی کامل از RTL و فارسی
  */
+/**
+ * رویداد Push: مدیریت اعلان‌ها با پشتیبانی کامل از RTL و فارسی
+ */
 self.addEventListener('push', (event) => {
-  let payload = {};
-  try {
-    payload = event.data ? event.data.json() : {};
-  } catch (e) {
-    console.error('Push payload parse error:', e);
-    payload = { title: 'اعلان جدید', body: event.data ? event.data.text() : '' };
-  }
+    console.log('🔔 Push event received!', event);
 
-  const title = payload.title || 'اعلان جدید';
-  const body = payload.body || 'مشاهده کنید';
-  const url = payload.url || (payload.data && payload.data.url) || '/';
+    let payload = {};
+    try {
+        payload = event.data ? event.data.json() : {};
+        console.log('📦 Push payload:', payload);
+    } catch (e) {
+        console.error('Push payload parse error:', e);
+        payload = { title: 'اعلان جدید', body: event.data ? event.data.text() : '' };
+    }
 
-  // 🔹 اضافه کردن کاراکترهای کنترلی یونیکد برای اجبار حالت RTL
-  const rtlBody = '\u202B' + body + '\u202C';
-  const rtlTitle = '\u202B' + title + '\u202C';
+    const title = payload.title || 'اعلان جدید';
+    const body = payload.body || 'مشاهده کنید';
 
-  const options = {
-    body: rtlBody,
-    vibrate: [100, 50, 100],
-    data: { url },
-    dir: 'rtl',
-    lang: 'fa-IR',
-    actions: payload.actions || [{ action: 'open', title: 'باز کردن' }],
-    tag: payload.tag || 'todo-webpush',
-    renotify: !!payload.renotify,
-    requireInteraction: false
-  };
+    // 🔹 استخراج url از payload یا data
+    const url = payload.url || (payload.data && payload.data.url) || '/';
+    const icon = payload.icon || '/pwa-192x192.png';
+    const badge = payload.badge || '/pwa-180x180.png';
+    const tag = payload.tag || 'todo-webpush';
+    const actions = payload.actions || [{ action: 'open', title: 'باز کردن' }];
 
-  event.waitUntil(
-    self.registration.showNotification(rtlTitle, options)
-  );
+    // 🔹 اضافه کردن کاراکترهای کنترلی یونیکد برای اجبار حالت RTL
+    const rtlBody = '\u202B' + body + '\u202C';
+    const rtlTitle = '\u202B' + title + '\u202C';
+
+    const options = {
+        body: rtlBody,
+        icon: icon,
+        badge: badge,
+        vibrate: [100, 50, 100],
+        data: { url, ...payload.data }, // 🔹 merge all data
+        dir: 'rtl',
+        lang: 'fa-IR',
+        actions: actions,
+        tag: tag,
+        renotify: !!payload.renotify,
+        requireInteraction: false
+    };
+
+    console.log('📤 Showing notification with options:', options);
+
+    event.waitUntil(
+        self.registration.showNotification(rtlTitle, options)
+    );
 });
-
 /**
  * رویداد Notification Click: مدیریت کلیک روی نوتیفیکیشن
  */
@@ -132,7 +147,7 @@ async function openOrFocus(url) {
     includeUncontrolled: true,
   });
   for (const client of allClients) {
-    if (client.url.includes(url) && 'focus' in client) { 
+    if (client.url.includes(url) && 'focus' in client) {
       return client.focus();
     }
   }

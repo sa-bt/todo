@@ -1,30 +1,29 @@
 <template>
-  <!-- اضافه کردن ایونت موس برای افکت اشعه -->
   <section id="contact" class="surface py-20 md:py-32 scroll-mt-40 overflow-hidden" @mousemove="handleMouseMove">
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto relative z-10">
 
         <!-- عنوان -->
         <h2
-          class="text-3xl md:text-5xl font-extrabold text-[var(--color-heading)] text-center mb-6"
-          data-aos="fade-up"
+            class="text-3xl md:text-5xl font-extrabold text-[var(--color-heading)] text-center mb-6"
+            data-aos="fade-up"
         >
           {{ t('contact.title') }}
         </h2>
         <p
-          class="max-w-2xl mx-auto text-center text-[var(--color-text-secondary)] leading-relaxed mb-16"
-          data-aos="fade-up"
-          data-aos-delay="100"
+            class="max-w-2xl mx-auto text-center text-[var(--color-text-secondary)] leading-relaxed mb-16"
+            data-aos="fade-up"
+            data-aos-delay="100"
         >
           {{ t('contact.text') }}
         </p>
 
-        <!-- باکس فرم (با Paper Effect و Spotlight) -->
+        <!-- باکس فرم -->
         <div
-          class="spotlight-card surface-soft p-8 md:p-12 rounded-2xl border-token shadow-xl relative"
-          data-aos="fade-up"
-          data-aos-delay="200"
-          style="
+            class="spotlight-card surface-soft p-8 md:p-12 rounded-2xl border-token shadow-xl relative"
+            data-aos="fade-up"
+            data-aos-delay="200"
+            style="
             box-shadow:
               inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
               inset 0 -1px 0 0 rgba(0, 0, 0, 0.05),
@@ -38,10 +37,10 @@
             <div class="w-24 h-24 rounded-full bg-green-100 text-green-500 flex items-center justify-center mb-6 shadow-lg">
               <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </div>
-            <h3 class="text-2xl font-bold text-[var(--color-heading)] mb-2">پیام شما ارسال شد!</h3>
-            <p class="text-[var(--color-text-secondary)] text-center max-w-md">از اینکه وقت گذاشتید و با ما در ارتباط بودید سپاسگزاریم. ما در اسرع وقت پاسخ شما را خواهیم داد.</p>
+            <h3 class="text-2xl font-bold text-[var(--color-heading)] mb-2">{{ t('contact.success_title') }}</h3>
+            <p class="text-[var(--color-text-secondary)] text-center max-w-md">{{ t('contact.success_text') }}</p>
             <button @click="resetForm" class="mt-8 px-6 py-2 rounded-lg bg-[var(--color-background-mute)] hover:bg-[var(--color-border)] transition text-[var(--color-text)] font-medium">
-              ارسال پیام جدید
+              {{ t('contact.send_new') }}
             </button>
           </div>
 
@@ -61,17 +60,17 @@
               <!-- نام -->
               <div class="relative group">
                 <input
-                  v-model="form.name"
-                  id="input-name"
-                  type="text"
-                  :placeholder="!form.name ? t('contact.name') : ''"
-                  :class="inputWrapperClass('name')"
+                    v-model="form.name"
+                    id="input-name"
+                    type="text"
+                    :placeholder="!form.name ? t('contact.name') : ''"
+                    :class="inputWrapperClass('name')"
                 />
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 </div>
                 <p v-if="fieldErrors.name" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12 a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   {{ fieldErrors.name }}
                 </p>
               </div>
@@ -79,11 +78,11 @@
               <!-- ایمیل -->
               <div class="relative group">
                 <input
-                  v-model="form.email"
-                  id="input-email"
-                  type="email"
-                  :placeholder="!form.email ? t('contact.email') : ''"
-                  :class="['pr-10 pl-10', inputWrapperClass('email')]"
+                    v-model="form.email"
+                    id="input-email"
+                    type="email"
+                    :placeholder="!form.email ? t('contact.email') : ''"
+                    :class="['pr-10 pl-10', inputWrapperClass('email')]"
                 />
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -97,7 +96,7 @@
                 </div>
 
                 <p v-if="fieldErrors.email" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12 a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   {{ fieldErrors.email }}
                 </p>
               </div>
@@ -106,17 +105,17 @@
             <!-- پیام -->
             <div class="relative group mb-8">
               <textarea
-                v-model="form.message"
-                id="input-message"
-                rows="4"
-                :placeholder="!form.message ? t('contact.message') : ''"
-                :class="inputWrapperClass('message')"
+                  v-model="form.message"
+                  id="input-message"
+                  rows="4"
+                  :placeholder="!form.message ? t('contact.message') : ''"
+                  :class="inputWrapperClass('message')"
               ></textarea>
               <div class="absolute right-4 top-4 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
               </div>
               <p v-if="fieldErrors.message" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12 a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 {{ fieldErrors.message }}
               </p>
             </div>
@@ -127,12 +126,12 @@
               <!-- تصویر کپچا -->
               <div class="relative group overflow-hidden rounded-xl shadow-sm border border-[var(--color-border)] bg-white cursor-pointer" @click="refreshCaptcha">
                 <img
-                  :key="captcha.id"
-                  v-if="captcha.image"
-                  :src="captcha.image"
-                  alt="captcha"
-                  class="block w-[200px] h-[70px] object-contain select-none transition-transform group-hover:scale-105"
-                  draggable="false"
+                    :key="captcha.id"
+                    v-if="captcha.image"
+                    :src="captcha.image"
+                    alt="captcha"
+                    class="block w-[200px] h-[70px] object-contain select-none transition-transform group-hover:scale-105"
+                    draggable="false"
                 />
                 <div v-else class="w-[200px] h-[70px] grid place-items-center text-gray-400">
                   <svg class="animate-spin h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -144,11 +143,11 @@
 
               <!-- دکمه رفرش دایره‌ای -->
               <button
-                type="button"
-                @click="refreshCaptcha"
-                class="w-10 h-10 rounded-full border border-[var(--color-border)] hover:bg-[var(--color-primary)] hover:text-white hover:border-transparent transition flex items-center justify-center text-[var(--color-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="isLoading"
-                aria-label="تازه‌سازی کپچا"
+                  type="button"
+                  @click="refreshCaptcha"
+                  class="w-10 h-10 rounded-full border border-[var(--color-border)] hover:bg-[var(--color-primary)] hover:text-white hover:border-transparent transition flex items-center justify-center text-[var(--color-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isLoading"
+                  aria-label="تازه‌سازی کپچا"
               >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               </button>
@@ -156,22 +155,22 @@
               <!-- ورودی کپچا -->
               <div class="flex-1 w-full relative group">
                 <input
-                  ref="captchaInput"
-                  v-model="captcha.answer"
-                  id="input-captcha"
-                  type="text"
-                  maxlength="6"
-                  :placeholder="!captcha.answer ? 'کد تصویر' : ''"
-                  :class="inputWrapperClass('captcha')"
-                  :disabled="isLoading"
-                  inputmode="text"
-                  autocomplete="off"
+                    ref="captchaInput"
+                    v-model="captcha.answer"
+                    id="input-captcha"
+                    type="text"
+                    maxlength="6"
+                    :placeholder="!captcha.answer ? t('contact.captcha_placeholder') : ''"
+                    :class="inputWrapperClass('captcha')"
+                    :disabled="isLoading"
+                    inputmode="text"
+                    autocomplete="off"
                 />
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </div>
                 <p v-if="fieldErrors.captcha" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12 a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   {{ fieldErrors.captcha }}
                 </p>
               </div>
@@ -180,9 +179,9 @@
             <!-- دکمه ارسال -->
             <div class="flex items-center justify-end gap-4">
               <button
-                type="submit"
-                :disabled="isLoading"
-                class="btn btn-primary px-10 py-3.5 text-lg shadow-lg hover:shadow-[var(--color-primary)]/40 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 transform hover:-translate-y-0.5"
+                  type="submit"
+                  :disabled="isLoading"
+                  class="btn btn-primary px-10 py-3.5 text-lg shadow-lg hover:shadow-[var(--color-primary)]/40 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 transform hover:-translate-y-0.5"
               >
                 <span v-if="isLoading" class="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
                 <span v-else>{{ t('contact.send') }}</span>
@@ -224,26 +223,35 @@ const fieldErrors = ref({})
 const captcha = reactive({ id: '', image: '', answer: '' })
 const captchaInput = ref(null)
 
-// State ولیدیشن ایمیل (null: پیش فرض, true: صحیح, false: غلط)
+// State ولیدیشن ایمیل
 const emailValidationStatus = ref(null)
 
-// Helper: کلاس استایل اینپوت (پشتیبانی از آیکون و پرشینگ لبل)
+// Helper: کلاس استایل اینپوت
 const inputWrapperClass = (field) => {
   return [
     'w-full px-10 py-3 rounded-xl bg-[var(--color-background)] border-token transition-all outline-none text-[var(--color-text)]',
-    // وقتی فیلد پر است یا فوکوس دارد
     'placeholder-transparent peer',
-    // حالت خطا
     fieldErrors.value[field] ? 'border-red-500 ring-1 ring-red-500' : 'focus:ring-2 focus:ring-[var(--color-primary)]'
   ]
+}
+
+// Helper: ترجمه کلیدهای خطا
+const translateError = (errorKey) => {
+  if (!errorKey) return ''
+  // اگر شامل نقطه باشه یعنی کلید ترجمه است
+  if (errorKey.includes('.')) {
+    return t(errorKey)
+  }
+  // در غیر این صورت خود متن رو برگردان (backward compatibility)
+  return errorKey
 }
 
 // --- منطق Spotlight Effect ---
 const handleMouseMove = (e) => {
   for (const card of document.getElementsByClassName("spotlight-card")) {
     const rect = card.getBoundingClientRect(),
-      x = e.clientX - rect.left,
-      y = e.clientY - rect.top;
+        x = e.clientX - rect.left,
+        y = e.clientY - rect.top;
 
     card.style.setProperty("--mouse-x", `${x}px`);
     card.style.setProperty("--mouse-y", `${y}px`);
@@ -256,16 +264,13 @@ const validateEmail = (email) => {
     emailValidationStatus.value = null
     return
   }
-  // یک Regex ساده اما قدرتمند برای چک ساختار ایمیل
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   emailValidationStatus.value = emailRegex.test(email)
 }
 
-// وچ کردن ایمیل
 watch(() => form.email, (newVal) => {
   validateEmail(newVal)
 })
-
 
 // --- منطق کپچا ---
 function normalizeCaptchaAnswer(v) {
@@ -288,7 +293,7 @@ async function fetchCaptcha() {
       headers: { 'Content-Type': 'application/json', 'Accept':'application/json' }
     })
 
-    if (!res.ok) throw new Error('خطا در دریافت کپچا')
+    if (!res.ok) throw new Error(t('captcha.fetch_error'))
 
     const data = await res.json()
     const payload = data?.data ?? data
@@ -297,16 +302,18 @@ async function fetchCaptcha() {
     captcha.image = payload.image_utf8 || payload.image
     captcha.answer = ''
 
-    await nextTick()
-    captchaInput.value?.focus()
   } catch (e) {
     console.error(e)
-    fieldErrors.value.captcha = 'خطا در بارگذاری کپچا'
+    fieldErrors.value.captcha = t('captcha.load_error')
   }
 }
 
 function refreshCaptcha() {
-  fetchCaptcha()
+  fetchCaptcha().then(() => {
+    nextTick(() => {
+      captchaInput.value?.focus()
+    })
+  })
 }
 
 function resetForm() {
@@ -342,33 +349,37 @@ const submitForm = async () => {
         if (typeof data.errors === 'object') {
           Object.keys(data.errors).forEach(key => {
             const fieldName = key === 'captcha_answer' ? 'captcha' : key
-            fieldErrors.value[fieldName] = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key]
+            const errorMsg = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key]
+            fieldErrors.value[fieldName] = translateError(errorMsg)
           })
         }
         if (Array.isArray(data.errors)) {
-          errorMessages.value = data.errors
+          errorMessages.value = data.errors.map(e => translateError(e))
         }
       } else if (data.message) {
-        errorMessages.value = [data.message]
+        errorMessages.value = [translateError(data.message)]
       }
 
+      // اگر خطای کپچا یا ولیدیشن داشت، کپچا رو رفرش کن
       if (fieldErrors.value.captcha || res.status === 422) {
         fetchCaptcha()
       }
       return
     }
 
+    // موفقیت
     success.value = true
-
     form.name = ""
     form.email = ""
     form.message = ""
     emailValidationStatus.value = null
+    captcha.answer = ""
 
     fetchCaptcha()
 
   } catch (error) {
-    errorMessages.value = ['خطایی در ارتباط با سرور رخ داد.']
+    console.error(error)
+    errorMessages.value = [t('errors.server_error')]
   } finally {
     isLoading.value = false
   }
@@ -378,7 +389,6 @@ onMounted(() => {
   fetchCaptcha()
 })
 </script>
-
 <style scoped>
 /* --- افکت موفقیت --- */
 @keyframes fade-in-up {
@@ -403,9 +413,9 @@ onMounted(() => {
 /* --- Spotlight Effect --- */
 .spotlight-card::before {
   background: radial-gradient(
-    800px circle at var(--mouse-x) var(--mouse-y),
-    rgba(var(--color-primary-rgb), 0.06),
-    transparent 40%
+      800px circle at var(--mouse-x) var(--mouse-y),
+      rgba(var(--color-primary-rgb), 0.06),
+      transparent 40%
   );
   z-index: 0;
   content: "";

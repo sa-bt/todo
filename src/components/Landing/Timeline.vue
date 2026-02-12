@@ -1,9 +1,9 @@
 <template>
   <section id="experience" class="py-28 relative">
     <h2
-      class="text-4xl font-extrabold text-[var(--color-heading)] mb-20 text-center"
-      data-aos="fade-up"
-      data-aos-once="false"
+        class="text-4xl font-extrabold text-[var(--color-heading)] mb-20 text-center"
+        data-aos="fade-up"
+        data-aos-once="false"
     >
       {{ t('experience.title') }}
     </h2>
@@ -11,23 +11,22 @@
     <div class="relative max-w-5xl mx-auto px-6">
 
       <!-- خط عمودی -->
-      <!-- موبایل: سمت چپ، دسکتاپ: وسط -->
       <div
-        class="absolute top-0 bottom-0 left-[20px] md:left-1/2 w-[3px] md:-translate-x-1/2
+          class="absolute top-0 bottom-0 left-[20px] md:left-1/2 w-[3px] md:-translate-x-1/2
                bg-[var(--color-primary)] opacity-40 rounded-full"
       ></div>
 
       <!-- آیتم‌ها -->
       <div
-        v-for="(item, i) in items"
-        :key="i"
-        class="relative w-full flex mb-20"
-        :class="getLayoutClass(i)"
+          v-for="(item, i) in items"
+          :key="i"
+          class="relative w-full flex mb-20"
+          :class="getLayoutClass(i)"
       >
 
         <!-- دایره روی خط -->
         <div
-          class="absolute left-[20px] md:left-1/2 -translate-x-1/2 w-5 h-5 rounded-full
+            class="absolute left-[20px] md:left-1/2 -translate-x-1/2 w-5 h-5 rounded-full
                  bg-[var(--color-primary)]
                  shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.4)]
                  z-20"
@@ -35,12 +34,12 @@
 
         <!-- کارت -->
         <div
-          class="card-hover w-full md:w-[42%] bg-white/10 backdrop-blur-xl border border-white/20
+            class="card-hover w-full md:w-[42%] bg-white/10 backdrop-blur-xl border border-white/20
                  p-5 rounded-xl shadow-lg transition-all duration-500
                  pl-[50px] md:pl-5"
-          :data-aos="computeAos(i)"
-          :data-aos-once="false"
-          data-aos-duration="800"
+            :data-aos="computeAos(i)"
+            :data-aos-once="false"
+            data-aos-duration="800"
         >
           <h3 class="text-lg font-bold text-[var(--color-heading)] mb-1 text-left md:text-center">
             {{ item.role }}
@@ -95,7 +94,6 @@ const items = computed(() => tm('experience.items'))
 
 // تابع تعیین چیدمان (زیگزاگ در دسکتاپ، راست‌چین در موبایل)
 const getLayoutClass = (i) => {
-  // در موبایل: همه کارت‌ها به سمت راست بروند (کنار خط چپ)
   if (isMobile.value) return 'justify-end'
 
   // منطق زیگزاگ کد اصلی شما
@@ -110,10 +108,8 @@ const getLayoutClass = (i) => {
 
 // تابع تعیین انیمیشن
 const computeAos = (i) => {
-  // در موبایل: همه از پایین بالا بیایند
   if (isMobile.value) return 'fade-up'
 
-  // منطق زیگزاگ کد اصلی شما
   if (props.isFa) {
     // RTL
     return i % 2 === 0 ? 'fade-left' : 'fade-right'

@@ -11,8 +11,8 @@ export async function requestNotificationPermission() {
   }
 }
 
-// ✅ ثبت Web Push فقط اگر کاربر اجازه داده و قبلاً ثبت نشده باشد
-export async function registerWebPush() {
+// ✅ ثبت Web Push - با پذیرش پارامتر registration (اختیاری)
+export async function registerWebPush(providedRegistration = null) {
   try {
     if (!('serviceWorker' in navigator)) {
       console.warn('❌ مرورگر از ServiceWorker پشتیبانی نمی‌کند.')
@@ -27,7 +27,8 @@ export async function registerWebPush() {
     }
 
     // مرحله ۲: آماده‌سازی Service Worker
-    const registration = await navigator.serviceWorker.ready
+    // از providedRegistration استفاده کن اگر موجود باشه
+    const registration = providedRegistration || await navigator.serviceWorker.ready
 
     // مرحله ۳: بررسی اینکه آیا کاربر قبلاً subscribe شده یا نه
     const existingSub = await registration.pushManager.getSubscription()
@@ -41,9 +42,11 @@ export async function registerWebPush() {
     // مرحله ۴: ایجاد subscription جدید
     const vapidKey = import.meta.env.VITE_PUSH_PUBLIC_KEY
     if (!vapidKey) {
-      console.error('❌ VAPID_PUBLIC_KEY خالی است. لطفاً .env را بررسی کنید.')
+      console.error('❌ VITE_PUSH_PUBLIC_KEY خالی است. لطفاً .env را بررسی کنید.')
       return
     }
+
+    console.log('🔑 VAPID Key:', vapidKey.substring(0, 20) + '...')
 
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,

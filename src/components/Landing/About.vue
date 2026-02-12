@@ -1,19 +1,19 @@
 <template>
   <section id="about" class="surface relative py-12 md:py-32" ref="aboutRef">
     <div
-      class="max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-12 md:gap-20 items-start"
-      :class="isFa ? 'rtl' : 'ltr'"
+        class="max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-12 md:gap-20 items-start"
+        :class="isFa ? 'rtl' : 'ltr'"
     >
       <!-- متن -->
       <div class="relative">
         <div
-          class="absolute top-0 bottom-0 w-[2px] bg-[var(--color-primary)] opacity-70"
-          :class="isFa ? 'right-0' : 'left-0'"
+            class="absolute top-0 bottom-0 w-[2px] bg-[var(--color-primary)] opacity-70"
+            :class="isFa ? 'right-0' : 'left-0'"
         ></div>
 
         <div
-          class="flex flex-col gap-6 md:gap-8 px-6"
-          :class="isFa ? 'text-right pr-10' : 'text-left pl-10'"
+            class="flex flex-col gap-6 md:gap-8 px-6"
+            :class="isFa ? 'text-right pr-10' : 'text-left pl-10'"
         >
           <h2 class="text-3xl md:text-4xl font-extrabold">
             {{ t('about.title') }}
@@ -25,21 +25,21 @@
 
           <!-- stats -->
           <div
-            class="flex gap-8 md:gap-12 mt-4 items-end"
-            :class="isFa ? 'flex-row-reverse' : 'flex-row'"
+              class="flex gap-8 md:gap-12 mt-4 items-center"
+              :class="isFa ? 'flex-row-reverse' : 'flex-row'"
           >
             <!-- experience -->
             <div class="flex flex-col items-center">
               <div class="counter-box">
                 <transition-group
-                  name="counter"
-                  tag="div"
-                  class="counter-number"
+                    name="counter"
+                    tag="div"
+                    class="counter-number"
                 >
                   <span
-                    v-for="num in [experience]"
-                    :key="num"
-                    class="counter-value"
+                      v-for="num in [experience]"
+                      :key="num"
+                      class="counter-value"
                   >
                     <span class="counter-num">{{ num }}</span>
                     <span class="counter-plus">+</span>
@@ -54,26 +54,29 @@
 
             <!-- projects -->
             <div class="flex flex-col items-center relative">
-              <span
-                class="stat-number flex items-center justify-center relative"
-                :style="{ transform: scaleStyle }"
-              >
+              <!-- FIX: اضافه کردن کانتینر ارتفاع ثابت برای تراز شدن -->
+              <div class="counter-box flex items-center justify-center relative">
                 <span
-                  ref="projectsNumber"
-                  :class="{ shake: pressure }"
+                    class="stat-number flex items-center justify-center relative"
+                    :style="{ transform: scaleStyle }"
                 >
-                  <span v-if="!exploded">{{ projects }}+</span>
-                  <span v-else class="infinity">∞+</span>
-                </span>
+                  <span
+                      ref="projectsNumber"
+                      :class="{ shake: pressure }"
+                  >
+                    <span v-if="!exploded">{{ projects }}+</span>
+                    <span v-else class="infinity">∞+</span>
+                  </span>
 
-                <!-- particles -->
-                <span
-                  v-for="p in particles"
-                  :key="p.id"
-                  class="particle"
-                  :style="p.style"
-                ></span>
-              </span>
+                  <!-- particles -->
+                  <span
+                      v-for="p in particles"
+                      :key="p.id"
+                      class="particle"
+                      :style="p.style"
+                  ></span>
+                </span>
+              </div>
 
               <span class="text-xs md:text-sm text-text-secondary">
                 {{ t('about.projects') }}
@@ -83,16 +86,16 @@
         </div>
       </div>
 
-      <!-- تصویر با SVG ترک (ریسپانسیو) -->
+      <!-- تصویر با SVG ترک -->
       <div
-        ref="imageContainer"
-        class="relative w-full max-w-sm mx-auto md:mx-0 transition-all duration-700 bg-white p-1 rounded-2xl overflow-hidden"
-        :class="{ 'exploded-style': exploded }"
+          ref="imageContainer"
+          class="relative w-full max-w-sm mx-auto md:mx-0 transition-all duration-700 bg-white p-1 rounded-2xl overflow-hidden"
+          :class="{ 'exploded-style': exploded }"
       >
         <img
-          src="@/assets/images/myself.png"
-          class="rounded-2xl w-full h-auto"
-          alt="About"
+            src="@/assets/images/myself.png"
+            class="rounded-2xl w-full h-auto"
+            alt="About"
         />
 
         <!-- افکت فلش سفید -->
@@ -100,10 +103,10 @@
 
         <!-- SVG ترک‌ها -->
         <svg
-          v-if="exploded && svgSize"
-          class="absolute inset-0 z-50 pointer-events-none mix-blend-overlay"
-          :viewBox="`0 0 ${svgSize.w} ${svgSize.h}`"
-          style="width: 100%; height: 100%;"
+            v-if="exploded && svgSize"
+            class="absolute inset-0 z-50 pointer-events-none mix-blend-overlay"
+            :viewBox="`0 0 ${svgSize.w} ${svgSize.h}`"
+            style="width: 100%; height: 100%;"
         >
           <defs>
             <filter id="dark-shadow">
@@ -113,16 +116,16 @@
 
           <g filter="url(#dark-shadow)">
             <path
-              v-for="(p, index) in allPaths"
-              :key="index"
-              :d="p"
-              fill="none"
-              stroke="white"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              vector-effect="non-scaling-stroke"
-              class="crack-line"
+                v-for="(p, index) in allPaths"
+                :key="index"
+                :d="p"
+                fill="none"
+                stroke="white"
+                stroke-width="1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+                class="crack-line"
             />
           </g>
         </svg>
@@ -148,9 +151,8 @@ const allPaths = ref([])
 const aboutRef = ref(null)
 const projectsNumber = ref(null)
 const imageContainer = ref(null)
-
-// ذخیره تایمر برای جلوگیری از تداخل هنگام اسکرول سریع
 let animationTimer = null
+let hasAnimatedBefore = false
 
 const scaleStyle = computed(() => {
   if (!exploded.value) {
@@ -174,14 +176,6 @@ const projectToExp = [
 ]
 
 const animateProjects = () => {
-  // ریست کردن مقادیر قبل از شروع مجدد
-  experience.value = 0
-  projects.value = 0
-  pressure.value = false
-  exploded.value = false
-  particles.value = []
-  allPaths.value = []
-
   let value = 0
   let delay = 200
   const target = 100
@@ -191,8 +185,8 @@ const animateProjects = () => {
     projects.value = value
 
     const exp = projectToExp.reduce(
-      (acc, item) => (value >= item.p ? item.s : acc),
-      0
+        (acc, item) => (value >= item.p ? item.s : acc),
+        0
     )
     if (exp > experience.value) experience.value = exp
 
@@ -200,8 +194,8 @@ const animateProjects = () => {
       pressure.value = true
       const intensity = Math.min((value - 30) / 30, 1)
       projectsNumber.value?.style.setProperty(
-        '--shake-intensity',
-        intensity
+          '--shake-intensity',
+          intensity
       )
       delay = Math.max(30, 150 - (value - 30) * 2)
     }
@@ -218,7 +212,6 @@ const animateProjects = () => {
       return
     }
 
-    // ذخیره تایمر برای امکان قطع کردن هنگام اسکرول
     animationTimer = setTimeout(step, delay)
   }
 
@@ -249,7 +242,6 @@ const explode = () => {
   particles.value = list
 }
 
-// تولید ترک‌ها (نقطه برخورد پایین تصویر)
 const generateExtendedCracks = () => {
   const w = svgSize.value.w
   const h = svgSize.value.h
@@ -306,28 +298,32 @@ const createThinBranch = (x, y, angle, length, pathList) => {
 
 onMounted(() => {
   const observer = new IntersectionObserver(
-    entries => {
-      const isIntersecting = entries[0].isIntersecting
+      entries => {
+        const isIntersecting = entries[0].isIntersecting
 
-      if (isIntersecting) {
-        // وقتی وارد شد، اگر کانترها صفر هستند، شروع کن
-        if (projects.value === 0 && !exploded.value) {
-          animateProjects()
+        if (isIntersecting) {
+          // تکرار انیمیشن
+          if (!hasAnimatedBefore) {
+            animateProjects()
+            hasAnimatedBefore = true
+          } else if (projects.value === 0) {
+            animateProjects()
+          }
+        } else {
+          // ریست کامل برای اجرای مجدد هنگام بازگشت
+          if (animationTimer) {
+            clearTimeout(animationTimer)
+          }
+          experience.value = 0
+          projects.value = 0
+          exploded.value = false
+          pressure.value = false
+          particles.value = []
+          allPaths.value = []
+          hasAnimatedBefore = false
         }
-      } else {
-        // وقتی اسکرول کرد و خارج شد، همه چیز را ریست کن
-        if (animationTimer) {
-          clearTimeout(animationTimer) // توقف انیمیشن در حال اجرا
-        }
-        experience.value = 0
-        projects.value = 0
-        exploded.value = false
-        pressure.value = false
-        particles.value = []
-        allPaths.value = []
-      }
-    },
-    { threshold: 0.5 }
+      },
+      { threshold: 0.4 }
   )
   observer.observe(aboutRef.value)
 })
@@ -456,8 +452,8 @@ onMounted(() => {
   to {
     opacity: 0;
     transform: translate(
-      calc(-50% + var(--x)),
-      calc(-50% + var(--y))
+        calc(-50% + var(--x)),
+        calc(-50% + var(--y))
     );
   }
 }
