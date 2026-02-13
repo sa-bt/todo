@@ -8,22 +8,22 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   define: {
     // 💡 این مقدار برای Cache Busting توی سرویس ورکر استفاده میشه
-    'self.BUILD_HASH': JSON.stringify(Date.now().toString()), 
+    'self.BUILD_HASH': JSON.stringify(Date.now().toString()),
   },
-  
+
   plugins: [
     vue(),
     vueDevTools(),
     tailwindcss(),
     VitePWA({
-      strategies: 'injectManifest', 
+      strategies: 'injectManifest',
       srcDir: 'public',
       filename: 'sw.js',
       registerType: 'autoUpdate',
 
       injectManifest: {
         // ✅ این دقیقاً همون چیزیه که پرسیدی. باید این باشه تا لیست فایل‌ها رو به sw.js بده
-        injectionPoint: 'self.__WB_MANIFEST', 
+        injectionPoint: 'self.__WB_MANIFEST',
         swDest: 'dist/sw.js'
       },
 
@@ -36,17 +36,17 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-  { 
-    src: '/pwa-192x192.png', 
-    sizes: '192x192', 
+  {
+    src: '/pwa-192x192.png',
+    sizes: '192x192',
     type: 'image/png',
     purpose: 'any' // آیکون معمولی
   },
-  { 
-    src: '/pwa-512x512.png', 
-    sizes: '512x512', 
+  {
+    src: '/pwa-512x512.png',
+    sizes: '512x512',
     type: 'image/png',
-    purpose: 'maskable' // برای مچ شدن با لانچرهای مختلف گوشی
+    purpose: 'any' // برای مچ شدن با لانچرهای مختلف گوشی
   },
   {
     src: '/pwa-badge.png', // آدرس فایل بج که ساختی
