@@ -32,7 +32,7 @@ api.interceptors.response.use(
       if (pinia) {
         const auth = useAuthStore(pinia);
         auth.logout();
-        router.replace("/login");
+        router.replace("/vorod");
       }
     }
     return Promise.reject(err);
@@ -81,7 +81,7 @@ export async function getCourseList() {
     try {
         const response = await api.get('/admin/courses/list');
         // انتظار داریم API فهرست را در data.data برگرداند
-        return response.data.data; 
+        return response.data.data;
     } catch (error) {
         console.error("Error fetching course list:", error);
         throw error;

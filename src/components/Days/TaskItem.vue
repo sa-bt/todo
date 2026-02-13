@@ -1,12 +1,15 @@
 <script setup>
 import { computed } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { Check, Trash2 } from 'lucide-vue-next'
 import { useGoalsStore } from '@/stores/goals'
 
 const props = defineProps({
   task: { type: Object, required: true },
 })
-const emit = defineEmits(['toggle'])
+
+// اضافه کردن 'remove' به لیست ایونت‌ها
+const emit = defineEmits(['toggle', 'remove'])
+
 const goalsStore = useGoalsStore()
 
 const title = computed(() => {
@@ -20,7 +23,7 @@ const title = computed(() => {
     <li
         @click="emit('toggle', task)"
         class="goal-item h-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-token
-             surface cursor-pointer transition-all duration-300 select-none"
+             surface cursor-pointer transition-all duration-300 select-none group relative"
         :class="{
         'hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/50': !task.is_done,
         'opacity-70 scale-[0.99]': task.is_done
@@ -60,14 +63,29 @@ const title = computed(() => {
         </span>
       </div>
 
-      <!-- فلش -->
-      <div class="text-text-secondary hover:text-heading p-1 flex-shrink-0 transition-colors duration-200">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-             viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             class="lucide lucide-chevron-left">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
+      <!-- بخش چپ: دکمه حذف و فلش -->
+      <div class="flex items-center gap-1 flex-shrink-0">
+
+        <!-- دکمه حذف -->
+        <button
+            @click.stop="emit('remove', task.id)"
+            class="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20
+                   opacity-0 group-hover:opacity-100 transition-all duration-200 focus:outline-none"
+            title="حذف تسک"
+        >
+          <Trash2 class="w-4 h-4" />
+        </button>
+
+        <!-- فلش -->
+        <div class="text-text-secondary hover:text-heading p-1 transition-colors duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               class="lucide lucide-chevron-left">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </div>
+
       </div>
     </li>
   </Transition>

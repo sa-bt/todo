@@ -44,6 +44,7 @@ const routes = [
     path: "/",
     name: "landing",
     component: Landing,
+    meta: { guest: true },
   },
 
   // مسیرهای جدید ادمین
@@ -82,7 +83,7 @@ const routes = [
 
   // مسیر اصلی (Dashboard Layout)
   {
-    path: "/",
+    path: "/app",
     component: Dashboard,
     meta: { requiresAuth: true },
     children: [

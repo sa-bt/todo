@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import {
   Home, Calendar, CalendarDays, CalendarRange, CalendarClock,BarChart3,
-  Menu, Bell, X, Settings, LogOut, 
+  Menu, Bell, X, Settings, LogOut,
   Shield // 🌟 آیکون جدید: برای لینک ادمین
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
@@ -40,7 +40,7 @@ function toggleNotifications() {
     sysNotifs.loadFirstPage()
   }
   if (notificationsOpen.value) {
-    nextTick(() => { 
+    nextTick(() => {
       const firstBtn = notifMenuRef.value?.querySelector('button, a, [tabindex]:not([tabindex="-1"])')
       firstBtn?.focus?.()
     })
@@ -101,7 +101,7 @@ onMounted(() => {
   document.addEventListener('click', onDocumentClick, { passive: true })
   document.addEventListener('keydown', onKeydown)
   // بستن منوی موبایل پس از تغییر مسیر
-  router.afterEach(() => { mobileMenuOpen.value = false }) 
+  router.afterEach(() => { mobileMenuOpen.value = false })
 
   // نوتیف‌ها: شمارش، SW bridge، polling
   sysNotifs.refreshUnreadCount()
@@ -118,12 +118,12 @@ onBeforeUnmount(() => {
 // 🌟 ناوبری بالا (تبدیل به computed برای افزودن لینک ادمین)
 const navigationLinks = computed(() => {
     const links = [
-      { to: '/day',   label: 'نمای روزانه',  icon: CalendarClock, routeName: 'day'   },
-      { to: '/week',  label: 'نمای هفتگی',   icon: CalendarDays,  routeName: 'week'  },
+      { to: '/app/day',   label: 'نمای روزانه',  icon: CalendarClock, routeName: 'day'   },
+      { to: '/app/week',  label: 'نمای هفتگی',   icon: CalendarDays,  routeName: 'week'  },
       // { to: '/month', label: 'نمای ماهانه',  icon: CalendarRange, routeName: 'month' },
-      { to: '/year',  label: 'گزارشات',  icon: BarChart3,      routeName: 'year'  },
-      { to: '/goals', label: 'اهداف',        icon: Home,          routeName: 'goals' },
-      { to: '/settings', label: 'تنظیمات',   icon: Settings,      routeName: 'settings' }
+      { to: '/app/year',  label: 'گزارشات',  icon: BarChart3,      routeName: 'year'  },
+      { to: '/app/goals', label: 'اهداف',        icon: Home,          routeName: 'goals' },
+      { to: '/app/settings', label: 'تنظیمات',   icon: Settings,      routeName: 'settings' }
     ];
 
     // 💡 اگر کاربر ادمین است، لینک پنل مدیریت را اضافه کن
@@ -143,10 +143,10 @@ const isLinkActive = (routeName) => route.name === routeName
 </script>
 
 <template>
-  <header 
-      class="flex justify-between items-center surface border-b border-token px-6 py-3 shadow-sm sticky top-0 z-40" 
+  <header
+      class="flex justify-between items-center surface border-b border-token px-6 py-3 shadow-sm sticky top-0 z-40"
       dir="rtl"
-      style="--header-height: 60px;" 
+      style="--header-height: 60px;"
   >
     <div class="flex items-center gap-3">
       <img src="/pwa-512x512.png" alt="لوگو" class="w-10 h-10 rounded-full border border-token" />
@@ -328,9 +328,9 @@ const isLinkActive = (routeName) => route.name === routeName
   </nav>
 
   <transition name="fade">
-    <div 
-        v-if="mobileMenuOpen" 
-        class="fixed inset-0 bg-black/40 z-20 md:hidden" 
+    <div
+        v-if="mobileMenuOpen"
+        class="fixed inset-0 bg-black/40 z-20 md:hidden"
         @click="mobileMenuOpen = false"
         aria-hidden="true"
     ></div>
@@ -340,7 +340,7 @@ const isLinkActive = (routeName) => route.name === routeName
     <div
         v-if="mobileMenuOpen"
         id="mobile-nav"
-        class="md:hidden fixed right-0 top-0 w-72 h-screen flex flex-col gap-2 surface px-4 py-2 shadow-2xl z-30 rounded-l-xl overflow-y-auto" 
+        class="md:hidden fixed right-0 top-0 w-72 h-screen flex flex-col gap-2 surface px-4 py-2 shadow-2xl z-30 rounded-l-xl overflow-y-auto"
         role="menu"
     >
         <div class="flex justify-between items-center py-2 mb-1 border-b border-token">
@@ -362,7 +362,7 @@ const isLinkActive = (routeName) => route.name === routeName
             <span class="text-[11px] text-[var(--color-primary)] mt-0.5">{{ weekdayName }}</span>
           </div>
         </div>
-        
+
         <div class="flex justify-between items-center px-4 py-2 border-y border-token surface-soft mb-1 rounded-lg">
           <span class="text-sm font-medium text-[var(--color-text-secondary)]">انتخاب تم</span>
           <ThemeSwitcher />
@@ -432,14 +432,14 @@ const isLinkActive = (routeName) => route.name === routeName
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* انیمیشن اسلاید از راست (برای منوی موبایل) */
-.slide-right-enter-active, 
+.slide-right-enter-active,
 .slide-right-leave-active {
   transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.5, 1);
 }
 
-.slide-right-enter-from, 
+.slide-right-enter-from,
 .slide-right-leave-to {
-  transform: translateX(100%); 
+  transform: translateX(100%);
 }
 
 /* استایل‌های آیکون اعلان */

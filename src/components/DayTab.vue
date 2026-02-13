@@ -7,6 +7,7 @@ import TaskStatsCard from '@/components/Days/Card.vue'
 import TaskItem from '@/components/Days/TaskItem.vue'
 import AddTaskModal from '@/components/Days/AddTaskModal.vue'
 import { getTodayShamsi } from '@/utils/jalali'
+import DeleteConfirmModal from "./DeleteConfirmModal.vue";
 
 const tasksStore = useTasksStore()
 const goalsStore = useGoalsStore()
@@ -14,6 +15,10 @@ const goalsStore = useGoalsStore()
 const loading = ref(true)
 const showModal = ref(false)
 const today = ref(getTodayShamsi())
+
+// ✅ متغیرهای مربوط به مدال حذف
+const showDeleteModal = ref(false)
+const taskToDelete = ref(null)
 
 // تسک‌های امروز
 const todayTasks = computed(() => tasksStore.tasks)
@@ -24,7 +29,7 @@ const completedPercent = computed(() =>
     todayTasks.value.length ? (completedCount.value / todayTasks.value.length) * 100 : 0
 )
 
-// باز کردن مدال
+// باز کردن مدال افزودن تسک
 function openModal() {
   showModal.value = true
 }
@@ -43,6 +48,19 @@ async function toggleDone(task) {
   await tasksStore.updateTask(task.id, updated)
   const index = tasksStore.tasks.findIndex(t => t.id === task.id)
   if (index !== -1) tasksStore.tasks[index] = updated
+}
+
+// ✅ مدیریت حذف تسک
+function confirmRemove(id) {
+  taskToDelete.value = id
+  showDeleteModal.value = true
+}
+
+async function performDelete() {
+  if (!taskToDelete.value) return
+  await tasksStore.removeTask(taskToDelete.value)
+  showDeleteModal.value = false
+  taskToDelete.value = null
 }
 
 // لود اولیه
@@ -92,7 +110,6 @@ watch(() => completedPercent.value, (newVal) => {
         <span class="text-lg leading-none">➕</span>
         <span>افزودن تسک</span>
       </button>
-
     </div>
 
     <!-- Loader -->
@@ -103,7 +120,16 @@ watch(() => completedPercent.value, (newVal) => {
     <!-- لیست تسک‌ها -->
     <div v-else class="mt-6">
       <ul v-if="todayTasks.length" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 content-start">
-        <TaskItem v-for="task in todayTasks" :key="task.id" :task="task" @toggle="toggleDone" />
+
+        <!-- ✅ اضافه کردن ایونت @remove -->
+        <TaskItem
+            v-for="task in todayTasks"
+            :key="task.id"
+            :task="task"
+            @toggle="toggleDone"
+            @remove="confirmRemove"
+        />
+
       </ul>
 
       <div v-else class="text-gray-500 text-center py-10">
@@ -111,13 +137,22 @@ watch(() => completedPercent.value, (newVal) => {
       </div>
     </div>
 
-    <!-- کامپوننت مدال -->
+    <!-- کامپوننت مدال افزودن -->
     <AddTaskModal
         v-if="showModal"
         :goals="goalsStore.goals"
         :tasks="todayTasks"
         @close="showModal = false"
         @add="addTask"
+    />
+
+    <!-- ✅ کامپوننت مدال تایید حذف -->
+    <DeleteConfirmModal
+        :show="showDeleteModal"
+        title="حذف تسک"
+        message="آیا از حذف این تسک اطمینان دارید؟"
+        @close="showDeleteModal = false"
+        @confirm="performDelete"
     />
   </div>
 </template>
