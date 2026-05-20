@@ -16,7 +16,6 @@ const customUrlsToCache = [
   '/manifest.webmanifest',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/pwa-badge.png'
 ];
 
 /**
@@ -104,10 +103,26 @@ self.addEventListener('push', (event) => {
     const badge = payload.badge || '/pwa-180x180.png';
     const tag = payload.tag || 'todo-webpush';
     const actions = payload.actions || [{ action: 'open', title: 'باز کردن' }];
+  function formatNotificationText(text = '') {
+    const hasPersian = /[\u0600-\u06FF]/.test(text)
+    const hasLatin = /[a-zA-Z]/.test(text)
 
-    // 🔹 اضافه کردن کاراکترهای کنترلی یونیکد برای اجبار حالت RTL
-    const rtlBody = '\u202B' + body + '\u202C';
-    const rtlTitle = '\u202B' + title + '\u202C';
+    // متن فارسی یا ترکیبی که ماهیتش فارسی است
+    if (hasPersian) {
+      return `\u2067${text}\u2069` // RLI ... PDI
+    }
+
+    // متن کاملاً انگلیسی
+    if (hasLatin) {
+      return `\u2066${text}\u2069` // LRI ... PDI
+    }
+
+    return text
+  }
+
+  const rtlTitle = formatNotificationText(title)
+  const rtlBody = formatNotificationText(body)
+
 
     const options = {
         body: rtlBody,

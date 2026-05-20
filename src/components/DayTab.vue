@@ -19,7 +19,8 @@ const today = ref(getTodayShamsi())
 // ✅ متغیرهای مربوط به مدال حذف
 const showDeleteModal = ref(false)
 const taskToDelete = ref(null)
-
+const isTaskTogglePending = ref(false)
+const pendingTaskId = ref(null)
 // تسک‌های امروز
 const todayTasks = computed(() => tasksStore.tasks)
 
@@ -44,10 +45,28 @@ async function addTask(goalId) {
 
 // toggle انجام شدن
 async function toggleDone(task) {
-  const updated = { ...task, is_done: task.is_done ? 0 : 1 }
-  await tasksStore.updateTask(task.id, updated)
-  const index = tasksStore.tasks.findIndex(t => t.id === task.id)
-  if (index !== -1) tasksStore.tasks[index] = updated
+  if (isTaskTogglePending.value) return
+
+  isTaskTogglePending.value = true
+  pendingTaskId.value = task.id
+
+  try {
+    const newStatus = task.is_done ? 0 : 1
+
+    await tasksStore.updateTask(task.id, {
+      is_done: newStatus
+    })
+
+    /*
+      نکته مهم:
+      اینجا دیگر دستی tasksStore.tasks را تغییر نمی‌دهیم.
+      خود updateTask در استور، تسک را با data.task برگشتی از بک‌اند آپدیت می‌کند.
+    */
+
+  } finally {
+    isTaskTogglePending.value = false
+    pendingTaskId.value = null
+  }
 }
 
 // ✅ مدیریت حذف تسک
@@ -123,11 +142,13 @@ watch(() => completedPercent.value, (newVal) => {
 
         <!-- ✅ اضافه کردن ایونت @remove -->
         <TaskItem
-            v-for="task in todayTasks"
-            :key="task.id"
-            :task="task"
-            @toggle="toggleDone"
-            @remove="confirmRemove"
+          v-for="task in todayTasks"
+          :key="task.id"
+          :task="task"
+          :disabled="isTaskTogglePending"
+          :loading="pendingTaskId === task.id"
+          @toggle="toggleDone"
+          @remove="confirmRemove"
         />
 
       </ul>

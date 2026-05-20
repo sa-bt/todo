@@ -16,6 +16,7 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss(),
     VitePWA({
+      injectRegister: null,
       strategies: 'injectManifest',
       srcDir: 'public',
       filename: 'sw.js',
@@ -49,7 +50,7 @@ export default defineConfig({
     purpose: 'any' // برای مچ شدن با لانچرهای مختلف گوشی
   },
   {
-    src: '/pwa-badge.png', // آدرس فایل بج که ساختی
+    src: '/pwa-180x180.png', // آدرس فایل بج که ساختی
     sizes: '96x96',
     type: 'image/png',
     purpose: 'monochrome' // 👈 این خیلی مهمه! به سیستم می‌گه این تک‌رنگه
