@@ -83,67 +83,101 @@ self.addEventListener('fetch', (event) => {
  * رویداد Push: مدیریت اعلان‌ها با پشتیبانی کامل از RTL و فارسی
  */
 self.addEventListener('push', (event) => {
-    console.log('🔔 Push event received!', event);
+  console.log('🔔 Push event received!', event)
 
-    let payload = {};
-    try {
-        payload = event.data ? event.data.json() : {};
-        console.log('📦 Push payload:', payload);
-    } catch (e) {
-        console.error('Push payload parse error:', e);
-        payload = { title: 'اعلان جدید', body: event.data ? event.data.text() : '' };
+  let payload = {}
+
+  try {
+    payload = event.data ? event.data.json() : {}
+    console.log('📦 Push payload:', payload)
+  } catch (e) {
+    console.error('Push payload parse error:', e)
+    payload = {
+      title: 'اعلان جدید',
+      body: event.data ? event.data.text() : '',
+      data: {},
     }
-
-    const title = payload.title || 'اعلان جدید';
-    const body = payload.body || 'مشاهده کنید';
-
-    // 🔹 استخراج url از payload یا data
-    const url = payload.url || (payload.data && payload.data.url) || '/';
-    const icon = payload.icon || '/pwa-192x192.png';
-    const badge = payload.badge || '/pwa-180x180.png';
-    const tag = payload.tag || 'todo-webpush';
-    const actions = payload.actions || [{ action: 'open', title: 'باز کردن' }];
-  function formatNotificationText(text = '') {
-    const hasPersian = /[\u0600-\u06FF]/.test(text)
-    const hasLatin = /[a-zA-Z]/.test(text)
-
-    // متن فارسی یا ترکیبی که ماهیتش فارسی است
-    if (hasPersian) {
-      return `\u2067${text}\u2069` // RLI ... PDI
-    }
-
-    // متن کاملاً انگلیسی
-    if (hasLatin) {
-      return `\u2066${text}\u2069` // LRI ... PDI
-    }
-
-    return text
   }
+
+  const data = payload.data || {}
+
+  const title = payload.title || 'اعلان جدید'
+  const body = payload.body || 'مشاهده کنید'
+  const url = payload.url || data.url || '/'
+  const icon = payload.icon || '/pwa-192x192.png'
+  const badge = payload.badge || '/pwa-180x180.png'
+  const tag = payload.tag || data.tag || 'todo-webpush'
+  const type = data.type || payload.type || 'generic'
 
   const rtlTitle = formatNotificationText(title)
   const rtlBody = formatNotificationText(body)
 
+  const normalizedPayload = {
+    __kind: 'webpush',
+    id: data.notification_id || payload.id || null,
+    notification_id: data.notification_id || payload.id || null,
+    persisted: data.persisted !== false,
+    title,
+    body,
+    url,
+    icon,
+    tag,
+    type,
+    meta: data,
+    time: new Date().toISOString(),
+  }
 
-    const options = {
-        body: rtlBody,
-        icon: icon,
-        badge: badge,
-        vibrate: [100, 50, 100],
-        data: { url, ...payload.data }, // 🔹 merge all data
-        dir: 'rtl',
-        lang: 'fa-IR',
-        actions: actions,
-        tag: tag,
-        renotify: !!payload.renotify,
-        requireInteraction: false
-    };
+  const options = {
+    body: rtlBody,
+    icon,
+    badge,
+    vibrate: [100, 50, 100],
+    data: {
+      url,
+      ...data,
+      __kind: 'webpush',
+      notification_id: normalizedPayload.notification_id,
+    },
+    dir: 'rtl',
+    lang: 'fa-IR',
+    actions: payload.actions || [{ action: 'open', title: 'باز کردن' }],
+    tag,
+    renotify: !!payload.renotify,
+    requireInteraction: false,
+  }
 
-    console.log('📤 Showing notification with options:', options);
+  event.waitUntil(
+    Promise.all([
+      notifyOpenClients(normalizedPayload),
+      self.registration.showNotification(rtlTitle, options),
+    ])
+  )
+})
 
-    event.waitUntil(
-        self.registration.showNotification(rtlTitle, options)
-    );
-});
+async function notifyOpenClients(payload) {
+  const allClients = await clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  })
+
+  for (const client of allClients) {
+    client.postMessage(payload)
+  }
+}
+
+function formatNotificationText(text = '') {
+  if (!text) return ''
+
+  const value = String(text).trim()
+  const hasPersian = /[\u0600-\u06FF]/.test(value)
+
+  if (!hasPersian) {
+    return `\u2066${value}\u2069`
+  }
+
+  return `\u202B${value}\u202C`
+}
+
 /**
  * رویداد Notification Click: مدیریت کلیک روی نوتیفیکیشن
  */

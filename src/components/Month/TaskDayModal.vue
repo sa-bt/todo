@@ -1,12 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { useTasksStore } from '@/stores/tasks';
-import { useGoalsStore } from '@/stores/goals';
-import BaseSelect from '@/components/UI/BaseSelect.vue';
-import { Check, X, Plus } from 'lucide-vue-next';
+import { ref, computed } from 'vue'
+import { useTasksStore } from '@/stores/tasks'
+import { useGoalsStore } from '@/stores/goals'
+import BaseSelect from '@/components/UI/BaseSelect.vue'
+import { Check, X, Plus, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
-  // dayData شامل isoDate و dayOfMonth است.
   dayData: {
     type: Object,
     required: true,
@@ -15,159 +14,265 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
+})
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'task-updated'])
 
-const tasksStore = useTasksStore();
-const goalsStore = useGoalsStore();
+const tasksStore = useTasksStore()
+const goalsStore = useGoalsStore()
 
-// ----------------------------------------------------------------------
-// اصلاح حیاتی: خواندن تسک‌ها مستقیماً از Store برای واکنش‌پذیری
-// ----------------------------------------------------------------------
+const isAdding = ref(false)
+const newGoalId = ref(null)
+const isSubmitting = ref(false)
+const togglingTaskId = ref(null)
+
+const isToggling = computed(() => togglingTaskId.value !== null)
+const isBusy = computed(() => isSubmitting.value || isToggling.value)
 
 const dayTasks = computed(() => {
-  // تسک‌ها را مستقیماً از Pinia می‌خوانیم و فیلتر می‌کنیم
-  return tasksStore.tasks.filter(t => t.day === props.dayData.isoDate);
-});
-
-
-// --- منطق افزودن تسک جدید ---
-const isAdding = ref(false);
-const newGoalId = ref(null);
-const isSubmitting = ref(false);
+  return tasksStore.tasks.filter(task => {
+    const taskDay = task.day?.slice(0, 10)
+    return taskDay === props.dayData.isoDate
+  })
+})
 
 const goalOptions = computed(() =>
-    goalsStore.goals.map(g => ({ value: g.id, label: g.title }))
-);
+  goalsStore.goals.map(goal => ({
+    value: goal.id,
+    label: goal.title,
+  }))
+)
 
 const existingGoalIds = computed(() =>
-    // استفاده از dayTasks اصلاح شده
-    dayTasks.value.map(t => t.goal_id)
-);
+  dayTasks.value.map(task => task.goal_id)
+)
 
 const availableGoalOptions = computed(() =>
-    goalOptions.value.filter(option => !existingGoalIds.value.includes(option.value))
-);
+  goalOptions.value.filter(option => !existingGoalIds.value.includes(option.value))
+)
 
 function startAdding() {
-  isAdding.value = true;
-  newGoalId.value = null;
+  if (isBusy.value) return
+
+  isAdding.value = true
+  newGoalId.value = null
+}
+
+function cancelAdding() {
+  if (isBusy.value) return
+
+  isAdding.value = false
+  newGoalId.value = null
+}
+
+function closeModal() {
+  if (isBusy.value) return
+  emit('close')
 }
 
 async function handleAddTask() {
-  if (!newGoalId.value || isSubmitting.value) return;
-  isSubmitting.value = true;
+  if (!newGoalId.value || isSubmitting.value || isToggling.value) return
+
+  isSubmitting.value = true
 
   try {
-    const payload = {
+    await tasksStore.addTask({
       goal_id: newGoalId.value,
       day: props.dayData.isoDate,
-      is_done: 0
-    };
-    // وقتی addTask فراخوانی می‌شود، tasksStore.tasks آپدیت می‌شود و dayTasks واکنش نشان می‌دهد
-    await tasksStore.addTask(payload);
-    isAdding.value = false;
-    newGoalId.value = null;
+      is_done: false,
+    })
+
+    isAdding.value = false
+    newGoalId.value = null
+
+    emit('task-updated')
   } finally {
-    isSubmitting.value = false;
+    isSubmitting.value = false
   }
 }
 
-// --- منطق مدیریت تسک‌های موجود (Done/Undone) ---
 async function toggleTaskStatus(task) {
-  const newStatus = task.is_done ? 0 : 1;
+  if (!task?.id) return
 
-  // >>> اصلاح بر اساس متد Week View: استفاده از کل شیء task <<<
-  // یک کپی از تسک می‌گیریم تا is_done را تغییر دهیم
-  const payload = {
-    ...task,
-    is_done: newStatus
-  };
+  // قفل سراسری: تا وقتی یک تسک در حال آپدیت است، هیچ تسک دیگری قابل کلیک نیست.
+  if (isToggling.value) return
 
-  // فراخوانی اکشن Store با payload کامل
-  await tasksStore.updateTask(task.id, payload);
+  togglingTaskId.value = task.id
+
+  try {
+    await tasksStore.toggleTaskStatus(task)
+    emit('task-updated')
+  } finally {
+    togglingTaskId.value = null
+  }
 }
 
-// توابع کمکی UI
-function getGoalTitle(goalId) {
-  const goal = goalsStore.goals.find(g => g.id === goalId);
-  return goal ? goal.title : 'هدف حذف شده';
+function getGoalTitle(task) {
+  if (task.goal_title) return task.goal_title
+
+  const goal = goalsStore.goals.find(goal => goal.id === task.goal_id)
+  return goal ? goal.title : 'هدف حذف شده'
 }
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
-    <div class="absolute inset-0 bg-black/60" @click="$emit('close')"></div>
+  <div
+    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+    aria-modal="true"
+    role="dialog"
+  >
+    <div
+      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      @click="closeModal"
+    ></div>
 
     <div
-        class="relative w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-token surface-soft outline-none max-h-[90vh] overflow-y-auto"
-        tabindex="-1"
+      class="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-token surface-soft outline-none max-h-[88vh] overflow-y-auto"
+      tabindex="-1"
     >
-      <div class="flex justify-between items-center mb-6 border-b border-token pb-3">
-        <h3 class="text-xl font-bold text-[var(--color-heading)]">
-          تسک‌های روز {{ dayData.dayOfMonth }} {{ dayLabel }}
-        </h3>
-        <button @click="$emit('close')" class="p-2 rounded-full hover:surface-mute text-text-secondary tap-target">
+      <div
+        v-if="isToggling"
+        class="absolute inset-0 z-20 rounded-t-3xl sm:rounded-3xl bg-black/5 backdrop-blur-[1px] pointer-events-none"
+      ></div>
+
+      <div class="flex justify-between items-start gap-3 mb-5 border-b border-token pb-4">
+        <div>
+          <h3 class="text-lg sm:text-xl font-black text-[var(--color-heading)]">
+            تسک‌های روز {{ dayData.dayOfMonth }} {{ dayLabel }}
+          </h3>
+          <p class="text-xs sm:text-sm text-text-secondary mt-1">
+            برای تغییر وضعیت، روی کارت تسک کلیک کن.
+          </p>
+        </div>
+
+        <button
+          @click="closeModal"
+          :disabled="isBusy"
+          class="w-9 h-9 flex items-center justify-center rounded-full hover:surface-mute text-text-secondary tap-target"
+          :class="{ 'opacity-50 cursor-not-allowed': isBusy }"
+          aria-label="بستن"
+        >
           <X class="w-5 h-5" />
         </button>
       </div>
 
       <div v-if="dayTasks.length" class="space-y-3">
-        <div
-            v-for="task in dayTasks"
-            :key="task.id"
-            class="p-3 rounded-xl surface flex items-center justify-between transition-all duration-200"
-            :class="{ 'opacity-70 bg-green-500/10': task.is_done }"
+        <button
+          v-for="task in dayTasks"
+          :key="task.id"
+          type="button"
+          @click="toggleTaskStatus(task)"
+          :disabled="isToggling"
+          class="w-full p-3.5 rounded-2xl surface flex items-center justify-between gap-3 text-right border border-token transition-all duration-200 hover:shadow-md tap-target"
+          :class="{
+            'opacity-80 bg-green-500/10 border-green-500/20': task.is_done,
+            'opacity-55 cursor-not-allowed': isToggling && togglingTaskId !== task.id,
+            'cursor-wait ring-2 ring-[var(--color-primary)]/30': togglingTaskId === task.id,
+          }"
         >
-          <span class="text-base font-medium" :class="{ 'line-through text-text-secondary': task.is_done }">
-            {{ getGoalTitle(task.goal_id) }}
-          </span>
-
-          <button
-              @click="toggleTaskStatus(task)"
-              class="w-8 h-8 rounded-full border border-token flex items-center justify-center transition tap-target"
+          <div class="flex items-center gap-3 min-w-0">
+            <span
+              class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-token"
               :class="{
-                'bg-green-500 text-white hover:bg-green-600': task.is_done, // Done
-                'bg-token hover:bg-token-hover text-text-secondary': !task.is_done // Undone
+                'bg-green-500 text-white border-green-500': task.is_done,
+                'bg-token text-text-secondary': !task.is_done,
+              }"
+            >
+              <Loader2
+                v-if="togglingTaskId === task.id"
+                class="w-4 h-4 animate-spin"
+              />
+              <Check
+                v-else-if="task.is_done"
+                class="w-4 h-4"
+              />
+              <X
+                v-else
+                class="w-4 h-4"
+              />
+            </span>
+
+            <div class="min-w-0">
+              <p
+                class="text-sm sm:text-base font-bold truncate"
+                :class="{ 'line-through text-text-secondary': task.is_done }"
+              >
+                {{ getGoalTitle(task) }}
+              </p>
+
+              <p class="text-xs text-text-secondary mt-1">
+                {{ task.is_done ? 'انجام شده' : 'در انتظار انجام' }}
+              </p>
+            </div>
+          </div>
+
+          <span
+            class="hidden sm:inline-flex text-xs px-2 py-1 rounded-full"
+            :class="{
+              'bg-green-500/10 text-green-600': task.is_done,
+              'bg-orange-500/10 text-orange-500': !task.is_done,
             }"
-              aria-label="تغییر وضعیت تسک"
           >
-            <Check v-if="task.is_done" class="w-4 h-4" />
-            <X v-else class="w-4 h-4" />
-          </button>
-        </div>
+            {{ task.is_done ? 'Done' : 'Pending' }}
+          </span>
+        </button>
       </div>
-      <div v-else class="text-center py-4 text-text-secondary surface-mute rounded-xl">
+
+      <div
+        v-else
+        class="text-center py-8 text-text-secondary surface-mute rounded-2xl border border-dashed border-token"
+      >
         تسک فعالی برای این روز ثبت نشده است.
       </div>
 
       <div class="mt-6 pt-4 border-t border-token">
-        <button v-if="!isAdding && availableGoalOptions.length > 0" @click="startAdding" class="btn btn-ghost w-full justify-center tap-target text-[var(--color-primary)]">
-          <Plus class="w-5 h-5 ml-2" /> اضافه کردن تسک جدید
+        <button
+          v-if="!isAdding && availableGoalOptions.length > 0"
+          @click="startAdding"
+          :disabled="isBusy"
+          class="btn btn-ghost w-full justify-center tap-target text-[var(--color-primary)]"
+          :class="{ 'opacity-50 cursor-not-allowed': isBusy }"
+        >
+          <Plus class="w-5 h-5 ml-2" />
+          اضافه کردن تسک جدید
         </button>
 
-        <p v-else-if="!isAdding && availableGoalOptions.length === 0" class="text-sm text-red-500 text-center">
+        <p
+          v-else-if="!isAdding && availableGoalOptions.length === 0"
+          class="text-sm text-red-500 text-center"
+        >
           تمام اهداف موجود قبلاً برای این روز تسک دارند.
         </p>
 
         <div v-if="isAdding" class="space-y-3">
-          <p class="text-sm text-text-secondary">یک هدف را برای اضافه کردن به این روز انتخاب کنید:</p>
+          <p class="text-sm text-text-secondary">
+            یک هدف را برای اضافه کردن به این روز انتخاب کنید:
+          </p>
 
           <BaseSelect
-              v-model="newGoalId"
-              :options="availableGoalOptions"
-              placeholder="انتخاب هدف"
-              :disabled="isSubmitting"
+            v-model="newGoalId"
+            :options="availableGoalOptions"
+            placeholder="انتخاب هدف"
+            :disabled="isBusy"
           />
 
           <div class="flex justify-end gap-2">
-            <button @click="isAdding = false" class="btn btn-ghost tap-target">انصراف</button>
             <button
-                @click="handleAddTask"
-                :disabled="!newGoalId || isSubmitting"
-                class="btn btn-primary tap-target is-disabled"
+              @click="cancelAdding"
+              :disabled="isBusy"
+              class="btn btn-ghost tap-target"
+              :class="{ 'opacity-50 cursor-not-allowed': isBusy }"
             >
+              انصراف
+            </button>
+
+            <button
+              @click="handleAddTask"
+              :disabled="!newGoalId || isBusy"
+              class="btn btn-primary tap-target"
+              :class="{ 'opacity-50 cursor-not-allowed': !newGoalId || isBusy }"
+            >
+              <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin ml-2" />
               افزودن
             </button>
           </div>

@@ -206,12 +206,13 @@ function onKey(e){
   <!-- محتوا: Teleport به body تا هرگز گوشهٔ صفحه نچسبد -->
   <Teleport to="body">
     <div
-        v-show="visible"
-        ref="floating"
-        :id="tipId"
-        class="fixed pointer-events-none select-none tooltip-surface"
-        :style="{ maxWidth: maxWidth + 'px', zIndex: zIndex }"
-        role="tooltip"
+      v-show="visible"
+      ref="floating"
+      :id="tipId"
+      class="fixed pointer-events-none select-none tooltip-surface"
+      :class="{ 'tooltip-surface--visible': visible }"
+      :style="{ maxWidth: maxWidth + 'px', zIndex: zIndex }"
+      role="tooltip"
     >
       <div
           class="tooltip-box"
@@ -227,60 +228,75 @@ function onKey(e){
 </template>
 
 <style scoped>
-/* سطح کلی تولتیپ */
-.tooltip-surface{
-  /* ترنزیشن ورود/خروج */
+
+.tooltip-surface {
   opacity: 0;
   transform: translateY(-3px);
   transition: opacity .12s ease, transform .12s ease;
 }
-.tooltip-surface[style]{
-  /* وقتی v-show=true و پوزیشن اعمال شده، بلافاصله قابل‌دیدن */
+
+.tooltip-surface--visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* جعبه داخلی */
-.tooltip-box{
-  background: #fff;
+.tooltip-box {
+  background: var(--color-background-soft);
   color: var(--color-heading);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 8px 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
   font-size: 12px;
-  line-height: 1.4;
+  font-weight: 700;
+  line-height: 1.6;
 }
 
-/* فلش */
-.tooltip-arrow{
-  width: 10px; height: 10px;
+.tooltip-arrow {
+  width: 10px;
+  height: 10px;
   position: absolute;
-  background: #fff;
+  background: var(--color-background-soft);
   border-left: 1px solid var(--color-border);
   border-top: 1px solid var(--color-border);
   transform: rotate(45deg);
 }
-/* جای فلش نسبت به جهت */
-.tooltip-arrow[data-side="top"]{
-  bottom: -5px; left: 50%; transform: translateX(-50%) rotate(45deg);
-  border-left: 1px solid var(--color-border); border-top: 1px solid var(--color-border);
-}
-.tooltip-arrow[data-side="bottom"]{
-  top: -5px; left: 50%; transform: translateX(-50%) rotate(45deg);
-  border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
-}
-.tooltip-arrow[data-side="left"]{
-  right: -5px; top: 50%; transform: translateY(-50%) rotate(45deg);
-  border-top: 1px solid var(--color-border); border-right: 1px solid var(--color-border);
-}
-.tooltip-arrow[data-side="right"]{
-  left: -5px; top: 50%; transform: translateY(-50%) rotate(45deg);
-  border-left: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
+
+.tooltip-arrow[data-side="top"] {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  border-left: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
 }
 
-/* احترام به کاهش حرکت */
-@media (prefers-reduced-motion: reduce){
-  .tooltip-surface{ transition-duration: .01ms !important; }
+.tooltip-arrow[data-side="bottom"] {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tooltip-arrow[data-side="left"] {
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  border-top: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.tooltip-arrow[data-side="right"] {
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  border-left: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-surface {
+    transition-duration: .01ms !important;
+  }
 }
 </style>

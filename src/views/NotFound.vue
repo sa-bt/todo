@@ -11,7 +11,7 @@ import { RouterLink } from 'vue-router'
     </p>
 
     <RouterLink
-        to="/goals"
+        :to="{name:'month'}"
         class="px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-xl shadow-md hover:bg-[var(--color-primary-hover)] transition-all tap-target"
     >
       بازگشت به داشبورد
