@@ -231,6 +231,7 @@
 import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, RouterLink } from 'vue-router'
+import { registerWebPush } from '@/utils/webpush'
 
 import { LoaderCircle, RefreshCw, X, Check } from 'lucide-vue-next'
 
@@ -563,6 +564,7 @@ async function verifyOtp() {
 
     otpSuccessMessage.value = data.message
     auth.setAuth({ user: data.data.user, token: data.data.token })
+    await registerWebPush()
     
     setTimeout(() => {
       router.push({ name: 'goals' }) 

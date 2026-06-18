@@ -132,6 +132,7 @@
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, RouterLink } from 'vue-router'
+import { registerWebPush } from '@/utils/webpush'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -280,6 +281,8 @@ async function onSubmit () {
     const data = await res.json()
     clearErrors()
     auth.setAuth({ user: data.data.user, token: data.data.token })
+
+    await registerWebPush()
     
     // 💡 منطق هدایت شرطی بر اساس نقش
     if (auth.isAdmin) {
