@@ -88,6 +88,45 @@ export async function getCourseList() {
     }
 }
 
+export async function getAdminContents(params = {}) {
+    try {
+        const response = await api.get('/admin/contents', { params });
+        return response.data.data;
+    } catch (error) {
+        console.error("Error fetching admin contents:", error);
+        throw error;
+    }
+}
+
+export async function createAdminContent(payload) {
+    try {
+        const response = await api.post('/admin/contents', payload);
+        return response.data.data;
+    } catch (error) {
+        console.error("Error creating admin content:", error);
+        throw error;
+    }
+}
+
+export async function updateAdminContent(id, payload) {
+    try {
+        const response = await api.put(`/admin/contents/${id}`, payload);
+        return response.data.data;
+    } catch (error) {
+        console.error(`Error updating admin content ${id}:`, error);
+        throw error;
+    }
+}
+
+export async function deleteAdminContent(id) {
+    try {
+        await api.delete(`/admin/contents/${id}`);
+    } catch (error) {
+        console.error(`Error deleting admin content ${id}:`, error);
+        throw error;
+    }
+}
+
 
 // === Default Export ===
 

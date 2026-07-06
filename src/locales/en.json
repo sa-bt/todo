@@ -6,6 +6,12 @@
     "projects": "Experience",
     "contact": "Contact"
   },
+  "theme": {
+    "label": "Choose theme",
+    "sage": "Light green theme",
+    "sand": "Light sand theme",
+    "dark": "Dark theme"
+  },
   "hero": {
     "greeting": "Hello! 👋",
     "intro": "I'm Ahmad Bakhshiyan",

@@ -5,21 +5,23 @@
   /* PRIMITIVES (Sage) */
   --color-primary: #10b981;        /* Emerald */
   --color-primary-hover: #047857;
+  --color-primary-rgb: 16, 185, 129;
   --color-secondary: #64748b;      /* Slate */
   --color-secondary-hover: #475569;
   --color-accent: #14b8a6;         /* Teal */
+  --color-accent-rgb: 20, 184, 166;
 
-  /* Semantic (Vue-style) */
-  --color-background: #f8fafc;
-  --color-background-soft: #f3f6fb;
-  --color-background-mute: #eef2f7;
+  /* Semantic (Vue-style) — خنثی‌ها با ته‌رنگ سبز تا تم Sage هویت خودش رو داشته باشه */
+  --color-background: #f3f8f4;
+  --color-background-soft: #eaf2ec;
+  --color-background-mute: #dfece3;
 
-  --color-border: #e2e8f0;
-  --color-border-hover: #cbd5e1;
+  --color-border: #d2e3d8;
+  --color-border-hover: #b7d2c1;
 
-  --color-heading: #0f172a;
-  --color-text: #0f172a;
-  --color-text-secondary: #475569;
+  --color-heading: #17271d;
+  --color-text: #17271d;
+  --color-text-secondary: #4f6b5b;
 
   /* ... بقیه متغیرها ... */
 }
@@ -30,26 +32,30 @@ html.theme-minimal-sand{
   /* primitives */
   --color-primary:#d97706;         /* Amber-600 */
   --color-primary-hover:#b45309;   /* Amber-700 */
+  --color-primary-rgb: 217, 119, 6;
+  --color-accent-rgb: 16, 185, 129;
   --color-secondary:#78716c;       /* Stone-500 */
   --color-secondary-hover:#57534e; /* Stone-600 */
   --color-accent:#10b981;          /* Emerald-500 (اگر می‌خواهید Accent ثابت بماند یا آن را هم عوض کنید) */
 
-  /* semantic */
-  --color-background:#fafaf9;           /* Stone-50 */
-  --color-background-soft:#f5f5f4;      /* Stone-100 */
-  --color-background-mute:#e7e5e4;      /* Stone-200 */
+  /* semantic — خنثی‌ها با ته‌رنگ کرم/شنی گرم تا از Sage قابل تشخیص باشه */
+  --color-background:#faf5ec;
+  --color-background-soft:#f4ecdd;
+  --color-background-mute:#ecdfc8;
 
-  --color-border:#e7e5e4;               /* Stone-200 */
-  --color-border-hover:#d6d3d1;         /* Stone-300 */
+  --color-border:#e2d3b8;
+  --color-border-hover:#d2bf9d;
 
-  --color-heading:#1c1917;              /* Stone-900 */
-  --color-text:#1c1917;
-  --color-text-secondary:#57534e;       /* Stone-600 */
+  --color-heading:#292115;
+  --color-text:#292115;
+  --color-text-secondary:#6d5d43;
 }
 html.theme-dark {
   /* primitives (می‌توانند ثابت بمانند یا برای کنتراست بهتر تغییر کنند) */
   --color-primary: #34d399;        /* Emerald-400 (روشن‌تر برای پس‌زمینه تیره) */
   --color-primary-hover: #10b981;  /* Emerald-500 */
+  --color-primary-rgb: 52, 211, 153;
+  --color-accent-rgb: 34, 211, 238;
   --color-secondary: #94a3b8;      /* Slate-400 */
   --color-secondary-hover: #64748b;/* Slate-500 */
   --color-accent: #22d3ee;         /* Cyan-400 */

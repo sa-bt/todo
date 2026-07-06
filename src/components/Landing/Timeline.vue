@@ -1,12 +1,14 @@
 <template>
-  <section id="experience" class="py-28 relative">
+  <section id="experience" class="py-28 relative surface">
     <h2
-        class="text-4xl font-extrabold text-[var(--color-heading)] mb-20 text-center"
+        class="text-4xl font-extrabold text-[var(--color-heading)] mb-4 text-center"
         data-aos="fade-up"
         data-aos-once="false"
     >
       {{ t('experience.title') }}
     </h2>
+    <div class="w-14 h-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full mx-auto mb-20"
+         data-aos="fade-up" data-aos-delay="50" data-aos-once="false"></div>
 
     <div class="relative max-w-5xl mx-auto px-6">
 
@@ -34,7 +36,7 @@
 
         <!-- کارت -->
         <div
-            class="card-hover w-full md:w-[42%] bg-white/10 backdrop-blur-xl border border-white/20
+            class="card-hover w-full md:w-[42%] bg-[var(--color-background-soft)]/70 backdrop-blur-xl border border-[var(--color-border)]
                  p-5 rounded-xl shadow-lg transition-all duration-500
                  pl-[50px] md:pl-5"
             :data-aos="computeAos(i)"
@@ -53,7 +55,7 @@
             {{ item.period }}
           </p>
 
-          <p class="text-text-secondary leading-relaxed text-justify md:text-center text-[15px]">
+          <p class="text-text-secondary leading-relaxed text-justify text-[15px]">
             {{ item.desc }}
           </p>
         </div>

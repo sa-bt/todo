@@ -1,13 +1,15 @@
 <template>
-  <section id="skills" class="py-32 relative">
+  <section id="skills" class="py-32 relative surface-soft">
     <div class="max-w-7xl mx-auto px-6 md:px-12">
 
       <h2
-        class="text-4xl font-extrabold text-[var(--color-heading)] mb-14 text-center tracking-tight"
+        class="text-4xl font-extrabold text-[var(--color-heading)] mb-4 text-center tracking-tight"
         data-aos="fade-up"
       >
         {{ t('skills.title') }}
       </h2>
+      <div class="w-14 h-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full mx-auto mb-14"
+           data-aos="fade-up" data-aos-delay="50"></div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
 
@@ -15,11 +17,12 @@
           v-for="skill in skillsList"
           :key="skill.key"
           class="skill-card relative py-8 px-7 rounded-3xl
-                 bg-white/10 backdrop-blur-xl
-                 border border-white/20
-                 shadow-[0_10px_40px_rgba(0,0,0,0.25)]
+                 bg-[var(--color-background)]/70 backdrop-blur-xl
+                 border border-[var(--color-border)]
+                 shadow-[0_10px_40px_rgba(0,0,0,0.15)]
                  transition-all duration-500
-                 hover:shadow-[0_20px_50px_rgba(0,0,0,0.40)]
+                 hover:shadow-[0_20px_50px_rgba(0,0,0,0.30)]
+                 hover:border-[var(--color-border-hover)]
                  cursor-pointer will-change-transform"
           :data-skill="skill.key"
           data-aos="fade-up"
@@ -60,10 +63,10 @@
               v-for="(item, idx) in skill.items"
               :key="idx"
               class="px-3 py-1.5 rounded-full text-xs
-                     bg-white/20 backdrop-blur-md
-                     border border-white/30
+                     bg-[var(--color-background-mute)] backdrop-blur-md
+                     border border-[var(--color-border)]
                      text-[var(--color-heading)]
-                     shadow-sm hover:bg-white/30
+                     shadow-sm hover:bg-[var(--color-border)]
                      transition-all whitespace-nowrap"
             >
               {{ item }}
@@ -72,7 +75,7 @@
 
           <!-- Progress -->
           <div class="relative z-10">
-            <div class="h-2 rounded-full bg-white/25 overflow-hidden">
+            <div class="h-2 rounded-full bg-[var(--color-background-mute)] overflow-hidden">
               <div
                 class="h-full rounded-full bg-gradient-to-r
                        from-[var(--color-primary)]
@@ -98,24 +101,24 @@
 import { computed, reactive, onMounted, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  Code, Layers, Monitor, Server, Wrench, Database, Box
+  Code, Layers, Monitor, Server, Wrench, Database, Box, Cpu
 } from 'lucide-vue-next'
 
 const { t, tm } = useI18n()
 
 /* ===== Data from JSON ===== */
-const skillsData = tm('skills')
+const skillsData = computed(() => tm('skills'))
 
 const keys = computed(() =>
-  Object.keys(skillsData).filter(k => k !== 'title')
+  Object.keys(skillsData.value).filter(k => k !== 'title')
 )
 
 const skillsList = computed(() =>
   keys.value.map(key => ({
     key,
-    title: skillsData[key].title,
-    items: skillsData[key].items,
-    percent: skillsData[key].percent
+    title: skillsData.value[key].title,
+    items: skillsData.value[key].items,
+    percent: skillsData.value[key].percent
   }))
 )
 
@@ -126,6 +129,7 @@ const icons = {
   ux: Monitor,
   devops: Server,
   database: Database,
+  system: Cpu,
   tools: Wrench
 }
 

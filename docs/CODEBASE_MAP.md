@@ -1,8 +1,8 @@
 # نقشه فنی Repository
 
-> Last reviewed: 2026-06-15  
-> Repository root: `/home/develop/Projects/npmTodo`  
-> Application root: `/home/develop/Projects/npmTodo`  
+> Last reviewed: 2026-07-02
+> Repository root: `/home/develop/Projects/toDo/front`
+> Application root: `/home/develop/Projects/toDo/front`
 > Purpose: Repository architecture and navigation reference  
 > Source of truth: Current repository source code
 
@@ -12,7 +12,7 @@
 
 ## 1. معرفی فنی Repository
 
-این Repository یک frontend SPA برای مدیریت goals و tasks است. قابلیت‌های قابل مشاهده شامل ثبت‌نام و ورود، نمایش روزانه/هفتگی/ماهانه tasks، گزارش سالانه، مدیریت goals، تنظیم reminderها، اعلان‌های درون‌برنامه‌ای، Web Push، PWA و یک بخش محدود admin برای courseها و reportها است.
+این Repository یک frontend SPA برای مدیریت goals و tasks است. قابلیت‌های قابل مشاهده شامل ثبت‌نام و ورود، نمایش روزانه/هفتگی/ماهانه tasks، گزارش سالانه، مدیریت goals، تنظیم reminderها، اعلان‌های درون‌برنامه‌ای، Web Push، PWA، ورود جداگانه admin و بخش admin برای courseها، reportها و contentها است.
 
 نام package برابر `npmtodo` است. برچسب‌های محصول در فایل‌های مختلف `Do It`، `Todo` و `TodoGoals` هستند؛ یک نام محصول canonical از Repository قابل اثبات نیست.
 
@@ -20,7 +20,7 @@ Backend، Database، Migration، Queue worker و منطق server-side در ای�
 
 ## 2. Repository Root
 
-- Root واقعی Git: `/home/develop/Projects/npmTodo`
+- Root واقعی Git: `/home/develop/Projects/toDo/front`
 - Branch هنگام بررسی: `master`
 - وضعیت اولیه Worktree: clean
 - ساختار: یک Application root؛ Monorepo یا Workspace چندپروژه‌ای نیست.
@@ -31,7 +31,7 @@ Backend، Database، Migration، Queue worker و منطق server-side در ای�
 
 | مسیر | نقش |
 |---|---|
-| `/home/develop/Projects/npmTodo` | Root برنامه، npm package و Vite project |
+| `/home/develop/Projects/toDo/front` | Root برنامه، npm package و Vite project |
 | `src/` | Source اصلی Vue |
 | `public/` | Static assets، manifest و source Service Worker |
 
@@ -70,7 +70,9 @@ Versionهای resolved از `package-lock.json` استخراج شده‌اند. 
 - `vite.config.js`: Vue، Tailwind، Vue DevTools و PWA build integration
 - `.prettierrc.json`: `semi: false`، `singleQuote: true` و `printWidth: 100`
 - `.env.example`: contract عمومی Environment
-- `public/manifest.webmanifest`: manifest استاتیک PWA
+- `public/manifest.webmanifest`: manifest استاتیک PWA کاربر
+- `public/admin-manifest.webmanifest`: manifest استاتیک PWA مدیر
+- `src/utils/pwaManifest.js`: انتخاب manifest کاربر یا مدیر بر اساس مسیر جاری
 
 در Versionهای dependency اختلاف طبیعی بین rangeهای `package.json` و Versionهای resolved در lockfile وجود دارد؛ برای بازتولید نصب، lockfile مرجع دقیق‌تر است.
 
@@ -161,9 +163,9 @@ Route View/Component
 
 `Login.vue`، `Register.vue` و `Contact.vue` از native `fetch` و Environment key متفاوت `VITE_API_BASE` استفاده می‌کنند. CAPTCHA با `POST` گرفته می‌شود و login/register از `credentials: 'include'` استفاده می‌کنند.
 
-### درخواست‌های admin course
+### درخواست‌های admin
 
-`CourseList.vue` و `Course.vue` از helperهای `src/plugins/api.js` استفاده می‌کنند. این فایل Axios instance موازی با interceptor متفاوت دارد.
+`CourseList.vue`، `Course.vue` و `Contents.vue` از helperهای `src/plugins/api.js` استفاده می‌کنند. این فایل Axios instance موازی با interceptor متفاوت دارد.
 
 ## 11. Controller یا Handler Contracts
 
@@ -242,6 +244,8 @@ Server-side validation منبع نهایی است و در این Repository قا
 |---|---|---|
 | `/` | `landing` | `guest` |
 | `/vorod` | `login` | `guest` |
+| `/admin/login` | `adminLogin` | `guest`, `adminApp` |
+| `/admin/entry` | `adminEntry` | redirect to `adminLogin` |
 | `/sabtenam` | `register` | `guest` |
 | `/app/day` | `day` | inherited `requiresAuth` |
 | `/app/week` | `week` | inherited `requiresAuth` |
@@ -252,6 +256,7 @@ Server-side validation منبع نهایی است و در این Repository قا
 | `/app/notifications` | `notifications` | inherited `requiresAuth` |
 | `/admin` | `admin` | `requiresAuth`, `requiresAdmin` |
 | `/admin/reports` | `adminReports` | admin |
+| `/admin/contents` | `adminContents` | admin |
 | `/admin/courses` | `adminCoursesList` | admin |
 | `/admin/course/:slug` | `adminCourseDetail` | parent admin match |
 
@@ -266,7 +271,7 @@ Route nameها در Header، notification navigation و redirectها public inte
 - Reports: `/activities/:year`
 - Notifications: `/notifications`, `/notifications/unread-count`, `/notifications/:id/read`, `/notifications/read-all`
 - Push: `/save-subscription`
-- Admin: `/api/admin/stats`, `/admin/courses/list`, `/admin/course/:slug`
+- Admin: `/api/admin/stats`, `/admin/courses/list`, `/admin/course/:slug`, `/api/admin/contents`
 
 اغلب Axios responseها `data.data` را انتظار دارند. Notifications pagination انتظار nested shape با list و `meta.next_page_url` دارد.
 
@@ -277,6 +282,8 @@ Route nameها در Header، notification navigation و redirectها public inte
 - `isAuthenticated` وجود هم‌زمان token و user را بررسی می‌کند.
 - `isAdmin` فقط `user.role === 'admin'` را بررسی می‌کند.
 - Router guard برای `requiresAuth` و `requiresAdmin` client-side است.
+- مسیرهای admin بدون نشست معتبر به `/admin/login` هدایت می‌شوند.
+- اگر ورود از مسیر admin با حساب غیر admin انجام شود، نشست پاک می‌شود و پیام خطا نمایش داده می‌شود.
 - Authorization واقعی باید در API enforce شود؛ frontend guard امنیت server-side ایجاد نمی‌کند.
 - Login و Register CAPTCHA/OTP workflow دارند، ولی server behavior فقط از responseهای مورد انتظار frontend شناخته می‌شود.
 

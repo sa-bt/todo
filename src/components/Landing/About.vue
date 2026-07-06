@@ -1,7 +1,7 @@
 <template>
   <section id="about" class="surface relative py-12 md:py-32" ref="aboutRef">
     <div
-        class="max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-12 md:gap-20 items-start"
+        class="max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-16 md:gap-24 items-center"
         :class="isFa ? 'rtl' : 'ltr'"
     >
       <!-- متن -->
@@ -89,7 +89,8 @@
       <!-- تصویر با SVG ترک -->
       <div
           ref="imageContainer"
-          class="relative w-full max-w-sm mx-auto md:mx-0 transition-all duration-700 bg-white p-1 rounded-2xl overflow-hidden"
+          class="relative w-full max-w-sm mx-auto md:mx-0 transition-all duration-700 rounded-2xl overflow-hidden
+                 ring-2 ring-[var(--color-primary)]/25 shadow-2xl"
           :class="{ 'exploded-style': exploded }"
       >
         <img

@@ -7,8 +7,8 @@
     >
       <!-- سربرگ -->
       <div class="text-center mb-6">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-[var(--color-heading)]">ورود به سیستم</h1>
-        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">برای ادامه، وارد حساب خود شوید</p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-[var(--color-heading)]">{{ pageTitle }}</h1>
+        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ pageDescription }}</p>
       </div>
 
       <!-- باکس خطای جامع: اول errors، اگر نبود message -->
@@ -113,12 +113,12 @@
           :disabled="loading || !email || !password || !captcha.id || !captcha.answer"
           :aria-busy="loading ? 'true' : 'false'"
       >
-        <span v-if="!loading">ورود</span>
+        <span v-if="!loading">{{ submitLabel }}</span>
         <span v-else>در حال ورود…</span>
       </button>
 
       <!-- لینک ثبت‌نام -->
-      <div class="text-center mt-6">
+      <div v-if="!isAdminLogin" class="text-center mt-6">
         <span class="text-[var(--color-text-secondary)] text-sm">حساب کاربری نداری؟</span>
         <RouterLink to="/register" class="text-[var(--color-primary)] font-medium hover:underline mr-1">
           ثبت‌نام کن
@@ -129,13 +129,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { registerWebPush } from '@/utils/webpush'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+
+const isAdminLogin = computed(() => route.name === 'adminLogin' || route.query.mode === 'admin')
+const pageTitle = computed(() => isAdminLogin.value ? 'ورود مدیر' : 'ورود به سیستم')
+const pageDescription = computed(() => isAdminLogin.value ? 'برای ادامه، وارد حساب مدیر شوید' : 'برای ادامه، وارد حساب خود شوید')
+const submitLabel = computed(() => isAdminLogin.value ? 'ورود به پنل مدیریت' : 'ورود')
 
 const email = ref('')
 const password = ref('')
@@ -282,11 +288,22 @@ async function onSubmit () {
     clearErrors()
     auth.setAuth({ user: data.data.user, token: data.data.token })
 
+    if (isAdminLogin.value && !auth.isAdmin) {
+      auth.logout()
+      applyErrors({ messages: ['این مسیر فقط برای حساب مدیر قابل استفاده است.'] })
+      await fetchCaptcha()
+      await nextTick()
+      captchaInput.value?.focus()
+      return
+    }
+
     await registerWebPush()
     
+    const redirectPath = typeof route.query.redirect === 'string' ? route.query.redirect : null
+
     // 💡 منطق هدایت شرطی بر اساس نقش
     if (auth.isAdmin) {
-      router.push({ name: 'admin' }) // هدایت به داشبورد ادمین
+      router.push(redirectPath?.startsWith('/admin') ? redirectPath : { name: 'admin' }) // هدایت به داشبورد ادمین
     } else {
       router.push({ name: 'day' }) // 👈 کاربر عادی به 'day'
     }

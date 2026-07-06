@@ -5,11 +5,13 @@
 
         <!-- عنوان -->
         <h2
-            class="text-3xl md:text-5xl font-extrabold text-[var(--color-heading)] text-center mb-6"
+            class="text-3xl md:text-5xl font-extrabold text-[var(--color-heading)] text-center mb-4"
             data-aos="fade-up"
         >
           {{ t('contact.title') }}
         </h2>
+        <div class="w-14 h-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full mx-auto mb-6"
+             data-aos="fade-up" data-aos-delay="50"></div>
         <p
             class="max-w-2xl mx-auto text-center text-[var(--color-text-secondary)] leading-relaxed mb-16"
             data-aos="fade-up"
@@ -63,7 +65,7 @@
                     v-model="form.name"
                     id="input-name"
                     type="text"
-                    :placeholder="!form.name ? t('contact.name') : ''"
+                    :placeholder="t('contact.name')"
                     :class="inputWrapperClass('name')"
                 />
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
@@ -81,7 +83,7 @@
                     v-model="form.email"
                     id="input-email"
                     type="email"
-                    :placeholder="!form.email ? t('contact.email') : ''"
+                    :placeholder="t('contact.email')"
                     :class="['pr-10 pl-10', inputWrapperClass('email')]"
                 />
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
@@ -108,7 +110,7 @@
                   v-model="form.message"
                   id="input-message"
                   rows="4"
-                  :placeholder="!form.message ? t('contact.message') : ''"
+                  :placeholder="t('contact.message')"
                   :class="inputWrapperClass('message')"
               ></textarea>
               <div class="absolute right-4 top-4 text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none">
@@ -160,7 +162,7 @@
                     id="input-captcha"
                     type="text"
                     maxlength="6"
-                    :placeholder="!captcha.answer ? t('contact.captcha_placeholder') : ''"
+                    :placeholder="t('contact.captcha_placeholder')"
                     :class="inputWrapperClass('captcha')"
                     :disabled="isLoading"
                     inputmode="text"
@@ -230,7 +232,7 @@ const emailValidationStatus = ref(null)
 const inputWrapperClass = (field) => {
   return [
     'w-full px-10 py-3 rounded-xl bg-[var(--color-background)] border-token transition-all outline-none text-[var(--color-text)]',
-    'placeholder-transparent peer',
+    'placeholder:text-[var(--color-text-secondary)] placeholder:opacity-60',
     fieldErrors.value[field] ? 'border-red-500 ring-1 ring-red-500' : 'focus:ring-2 focus:ring-[var(--color-primary)]'
   ]
 }

@@ -6,10 +6,15 @@
   class="surface relative flex flex-col w-full overflow-hidden"
   :style="{ minHeight: 'calc(100dvh - var(--nav-height))' }"
   >
+  <!-- Gradient glow background -->
+  <div class="absolute inset-0 z-0 pointer-events-none"
+       style="background: radial-gradient(ellipse 75% 55% at 50% 0%, rgba(var(--color-primary-rgb), 0.10), transparent 70%)">
+  </div>
+
   <!-- آیکون‌های شناور -->
   <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
     <div v-for="(icon, index) in bubbleIcons" :key="index"
-         class="absolute animate-float-spin opacity-20"
+         class="absolute animate-float-spin opacity-55 md:opacity-75"
          :style="{
              left: icon.x + '%',
              top: icon.y + '%',
@@ -18,18 +23,18 @@
              width: icon.size + 'px',
              height: icon.size + 'px'
            }">
-      <img :src="icon.url" :alt="icon.name" class="w-full h-full object-contain drop-shadow-lg">
+      <img :src="icon.url" :alt="icon.name" class="w-full h-full object-contain drop-shadow-xl">
     </div>
   </div>
 
   <!-- Container -->
   <div
-      class="container mx-auto px-4 md:px-6 lg:px-8 w-full relative z-10 flex-grow flex items-center h-full py-10 md:py-0"
+      class="container mx-auto px-4 md:px-6 lg:px-8 w-full relative z-10 flex-grow flex items-center h-full py-4 md:py-0"
   >
     <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
 
       <!-- بخش متن -->
-      <div class="flex flex-col justify-center gap-6 md:gap-8 p-6 md:p-8 lg:p-10 rounded-2xl md:rounded-3xl backdrop-blur-md bg-white/[0.04] border border-white/10 shadow-2xl w-full min-w-0">
+      <div class="flex flex-col justify-center gap-3 md:gap-8 p-4 md:p-8 lg:p-10 rounded-2xl md:rounded-3xl backdrop-blur-md bg-[var(--color-background-soft)]/70 border border-[var(--color-border)] shadow-2xl w-full min-w-0">
 
         <transition name="fade-slide">
           <div v-if="step >= 1">
@@ -63,12 +68,12 @@
         </transition>
 
         <transition name="fade-slide">
-          <div v-if="step >= 4" class="w-full mt-4 md:mt-6">
-            <div class="flex flex-wrap gap-4 w-full justify-start">
-              <a href="#projects" class="btn hero-btn-primary w-full sm:w-auto text-center py-3 px-8 text-base md:text-lg">
+          <div v-if="step >= 4" class="w-full mt-1 md:mt-6">
+            <div class="flex flex-wrap gap-3 md:gap-4 w-full justify-start">
+              <a href="#timeline" class="btn hero-btn-primary w-full sm:w-auto text-center py-2.5 px-6 text-sm md:py-3 md:px-8 md:text-lg">
                 {{ t('hero.cta_projects') }}
               </a>
-              <a href="#contact" class="btn hero-btn-ghost w-full sm:w-auto text-center py-3 px-8 text-base md:text-lg">
+              <a href="#contact" class="btn hero-btn-ghost w-full sm:w-auto text-center py-2.5 px-6 text-sm md:py-3 md:px-8 md:text-lg">
                 {{ t('hero.cta_contact') }}
               </a>
             </div>
@@ -79,11 +84,11 @@
       <!-- بخش ترمینال -->
       <!-- order-first: در موبایل بالاتر از متن قرار میگیرد -->
       <!-- md:order-none: در دسکتاپ بسته به dir (چپ یا راست) قرار میگیرد -->
-      <div class="relative w-full order-first md:order-none flex items-center justify-center h-full pb-8 md:pb-0">
+      <div class="relative w-full order-first md:order-none flex items-center justify-center pb-2 md:pb-0 md:h-full">
         <div
             class="w-full bg-[#300a24]/95 backdrop-blur-xl rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]
                     border border-white/10 overflow-hidden flex flex-col
-                    min-h-[300px] md:h-[500px] lg:h-[600px] transition-all duration-500"
+                    h-[210px] md:h-[500px] lg:h-[600px] transition-all duration-500"
         >
           <!-- هدر ترمینال -->
           <div class="flex items-center justify-between px-4 py-3 md:px-6 bg-[#481439] border-b border-white/5 shrink-0">
@@ -157,14 +162,29 @@ const iconList = [
 ]
 
 const generateBubbles = () => {
-  bubbleIcons.value = iconList.map(icon => ({
-    ...icon,
-    x: Math.random() * 90 + 5,
-    y: Math.random() * 90 + 5,
-    size: Math.random() * 30 + 40,
-    duration: Math.random() * 15 + 20,
-    delay: Math.random() * -20
-  }))
+  // موقعیت‌ها در لبه‌های بخش — خارج از محدوده دو کارت وسط
+  const edgePositions = [
+    { x: 3,  y: 8  },   // گوشه بالا-چپ
+    { x: 30, y: 3  },   // بالا-مرکز-چپ
+    { x: 65, y: 4  },   // بالا-مرکز-راست
+    { x: 94, y: 9  },   // گوشه بالا-راست
+    { x: 96, y: 48 },   // لبه راست-میانی
+    { x: 95, y: 80 },   // لبه راست-پایین
+    { x: 6,  y: 78 },   // لبه چپ-پایین
+    { x: 2,  y: 40 },   // لبه چپ-میانی
+  ]
+
+  bubbleIcons.value = iconList.map((icon, i) => {
+    const pos = edgePositions[i % edgePositions.length]
+    return {
+      ...icon,
+      x: pos.x + (Math.random() * 3 - 1.5),
+      y: pos.y + (Math.random() * 3 - 1.5),
+      size: Math.random() * 28 + 68,
+      duration: Math.random() * 10 + 14,
+      delay: Math.random() * -20
+    }
+  })
 }
 
 const startCoding = async () => {
@@ -202,8 +222,8 @@ onMounted(() => {
 /* انیمیشن آیکون‌ها */
 @keyframes float-spin {
   0% { transform: translateY(0px) rotate(0deg) translateX(0); }
-  33% { transform: translateY(-20px) rotate(5deg) translateX(5px); }
-  66% { transform: translateY(10px) rotate(-5deg) translateX(-5px); }
+  33% { transform: translateY(-38px) rotate(10deg) translateX(16px); }
+  66% { transform: translateY(22px) rotate(-8deg) translateX(-14px); }
   100% { transform: translateY(0px) rotate(0deg) translateX(0); }
 }
 .animate-float-spin { animation: float-spin 20s infinite ease-in-out; }

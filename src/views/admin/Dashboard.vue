@@ -30,6 +30,17 @@
           گزارش‌ها و آمار
         </RouterLink>
         <RouterLink
+            :to="{ name: 'adminContents' }"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition flex-shrink-0"
+            :class="[
+                $route.name === 'adminContents'
+                    ? 'bg-[var(--color-primary)] text-white shadow-md'
+                    : 'bg-[var(--color-background)] text-[var(--color-heading)] border border-[var(--color-border)] hover:bg-[var(--color-background-mute)]'
+            ]"
+        >
+          تولید محتوا
+        </RouterLink>
+        <RouterLink
             :to="{ name: 'adminCoursesList' }"
             class="px-4 py-2 rounded-lg text-sm font-medium transition flex-shrink-0"
             :class="[

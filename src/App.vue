@@ -3,7 +3,7 @@
       id="app"
       class="min-h-screen text-[var(--color-text)] transition-colors duration-300"
   >
-    <main class=" mx-auto  sm:p-6 pb-20">
+    <main :class="mainClasses">
       <RouterView />
     </main>
 
@@ -17,7 +17,7 @@ import { RouterView, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUserSettingStore } from '@/stores/userSetting'
 import { useI18n } from 'vue-i18n'
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
 
@@ -26,6 +26,13 @@ const { locale } = useI18n()
 const route = useRoute()
 const authStore = useAuthStore()
 
+const mainClasses = computed(() => {
+  if (route.path.startsWith('/admin')) {
+    return 'min-h-screen'
+  }
+
+  return 'mx-auto sm:p-6 pb-20'
+})
 
 watch(locale, () => {
   setTimeout(() => {

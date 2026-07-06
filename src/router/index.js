@@ -9,7 +9,9 @@ import Landing from "@/views/landing/index.vue"
 
 // 🌟 وارد کردن کامپوننت جدید برای دوره ها
 import AdminDashboardLayout from "@/views/admin/Dashboard.vue"
+import AdminHome from "@/views/admin/Home.vue"
 import AdminReports from "@/views/admin/Reports.vue"
+import AdminContents from "@/views/admin/Contents.vue"
 import CourseList from "@/views/admin/CourseList.vue"
 import CourseDetail from "@/views/admin/Course.vue"
 
@@ -44,7 +46,20 @@ const routes = [
     path: "/",
     name: "landing",
     component: Landing,
-    meta: { guest: true },
+    meta: { guest: true, title: "احمد بخشیان | توسعه‌دهنده Laravel و Vue" },
+  },
+
+  {
+    path: "/admin/entry",
+    name: "adminEntry",
+    redirect: to => ({ name: "adminLogin", query: to.query }),
+  },
+
+  {
+    path: "/admin/login",
+    name: "adminLogin",
+    component: Login,
+    meta: { guest: true, adminApp: true },
   },
 
   // مسیرهای جدید ادمین
@@ -57,13 +72,19 @@ const routes = [
       {
         path: "",
         name: "adminSummary",
-        component: { template: '<div class="p-4">خلاصه وضعیت فعلی سیستم (مثلاً نمودارهای کلیدی)</div>' },
+        component: AdminHome,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
         path: "reports",
         name: "adminReports",
         component: AdminReports,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "contents",
+        name: "adminContents",
+        component: AdminContents,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
@@ -124,6 +145,10 @@ router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    if (to.meta.requiresAdmin || to.path.startsWith('/admin')) {
+      return next({ name: "adminLogin", query: { redirect: to.fullPath } })
+    }
+
     return next({ name: "login" })
   }
 
@@ -140,6 +165,10 @@ router.beforeEach((to, _from, next) => {
   }
 
   return next()
+})
+
+router.afterEach((to) => {
+  document.title = to.meta.title || "Do it"
 })
 
 export default router

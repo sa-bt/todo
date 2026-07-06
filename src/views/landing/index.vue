@@ -94,7 +94,7 @@
             @click.prevent="scrollToSection($event, item.id)"
             class="text-lg md:text-xl font-medium transition-all cursor-pointer px-4 py-1 rounded-lg hover:bg-[var(--color-background-mute)]"
             :class="[
-              activeSection === item.id ? 'text-primary bg-[var(--color-primary-light)]/10' : 'text-[var(--color-text)]',
+              activeSection === item.id ? 'text-primary bg-[rgba(var(--color-primary-rgb),0.1)]' : 'text-[var(--color-text)]',
               // Staggered Animation: تاخیر در نمایش آیتم‌ها
               `animate-fade-in-item`
             ]"
@@ -125,6 +125,34 @@
   </main>
 
   <Footer :isFa="isFa"/>
+
+  <!-- Scroll to Top -->
+  <Transition
+    enter-active-class="transition duration-300 ease-out"
+    enter-from-class="opacity-0 translate-y-4"
+    enter-to-class="opacity-100 translate-y-0"
+    leave-active-class="transition duration-200 ease-in"
+    leave-from-class="opacity-100 translate-y-0"
+    leave-to-class="opacity-0 translate-y-4"
+  >
+    <button
+      v-if="isScrolled"
+      @click="scrollToTop"
+      aria-label="بازگشت به بالا"
+      class="fixed bottom-6 right-6 z-50 w-11 h-11 rounded-full
+             bg-[var(--color-primary)] text-white
+             shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
+             flex items-center justify-center
+             hover:bg-[var(--color-primary-hover)] hover:scale-110
+             transition-all duration-300 focus:outline-none focus-visible:ring-2 ring-primary"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="m18 15-6-6-6 6"/>
+      </svg>
+    </button>
+  </Transition>
   </div>
 </template>
 
@@ -167,7 +195,7 @@ const navHeight = ref(80)
 const updateNavHeight = () => {
   if (navRef.value) {
     navHeight.value = navRef.value.offsetHeight;
-    document.documentElement.style.setProperty('--nav-height', `${navRef.value}px`);
+    document.documentElement.style.setProperty('--nav-height', `${navRef.value.offsetHeight}px`);
   }
 }
 
@@ -250,6 +278,10 @@ onMounted(() => {
   updateNavHeight();
   updateScroll();
 })
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 onUnmounted(() => {
   window.removeEventListener('scroll', updateScroll);

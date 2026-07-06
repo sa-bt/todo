@@ -9,6 +9,7 @@ import router from './router'
 import { createI18n } from 'vue-i18n'
 import fa from './locales/fa.json'
 import en from './locales/en.json'
+import { syncPwaManifest } from '@/utils/pwaManifest'
 
 const i18n = createI18n({
   legacy: false,
@@ -24,6 +25,11 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(i18n)
 app.use(router)
+
+syncPwaManifest()
+router.afterEach((to) => {
+  syncPwaManifest(to.path)
+})
 
 app.mount('#app')
 

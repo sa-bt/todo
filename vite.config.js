@@ -30,6 +30,7 @@ export default defineConfig({
 
       manifest: {
         name: 'Do It',
+        id: '/',
         short_name: 'Todo',
         description: 'مدیریت تسک‌ها و اهداف روزانه',
         theme_color: '#2563EB',

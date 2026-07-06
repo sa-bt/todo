@@ -14,8 +14,11 @@ const CACHE_STATIC_ASSETS = 'todo-app-assets-v' + BUILD_HASH;
 const customUrlsToCache = [
   '/',
   '/manifest.webmanifest',
+  '/admin-manifest.webmanifest',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
+  '/admin-pwa-192x192.png',
+  '/admin-pwa-512x512.png',
 ];
 
 /**
@@ -59,22 +62,53 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-/**
- * رویداد Fetch: استراتژی Cache-First برای سرعت بیشتر
- */
 self.addEventListener('fetch', (event) => {
-    // اجازه بده درخواست‌های API مستقیماً به شبکه بروند
-    if (event.request.url.includes('/api/')) {
+    const request = event.request;
+    const url = new URL(request.url);
+
+    if (request.method !== 'GET' || request.url.includes('/api/') || url.origin !== self.location.origin) {
         return;
     }
 
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                return response || fetch(event.request);
-            })
-    );
+    if (request.mode === 'navigate' || url.pathname.endsWith('.webmanifest')) {
+        event.respondWith(networkFirst(request, '/'));
+        return;
+    }
+
+    event.respondWith(cacheFirst(request));
 });
+
+async function networkFirst(request, fallbackUrl = null) {
+    try {
+        const response = await fetch(request, { cache: 'no-store' });
+
+        if (response && response.ok) {
+            const cache = await caches.open(CACHE_STATIC_ASSETS);
+            await cache.put(request, response.clone());
+        }
+
+        return response;
+    } catch (error) {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+
+        if (fallbackUrl) {
+            const fallbackResponse = await caches.match(fallbackUrl);
+            if (fallbackResponse) {
+                return fallbackResponse;
+            }
+        }
+
+        throw error;
+    }
+}
+
+async function cacheFirst(request) {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse || fetch(request);
+}
 
 /**
  * رویداد Push: مدیریت اعلان‌ها با پشتیبانی کامل از RTL و فارسی
