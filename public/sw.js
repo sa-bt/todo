@@ -8,58 +8,80 @@ const precachedAssets = self.__WB_MANIFEST || [];
 
 // استفاده از BUILD_HASH تزریقی از Vite برای جلوگیری از تداخل کش
 const BUILD_HASH = self.BUILD_HASH || Date.now().toString();
-const CACHE_STATIC_ASSETS = 'todo-app-assets-v' + BUILD_HASH;
+const CACHE_PREFIX = 'todo-app-assets-v';
+const CACHE_STATIC_ASSETS = CACHE_PREFIX + BUILD_HASH;
 
 // فایل‌های پایه که همیشه باید در کش باشند
 const customUrlsToCache = [
   '/',
+  '/admin.html',
   '/manifest.webmanifest',
   '/admin-manifest.webmanifest',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
+  '/pwa-180x180.png',
   '/admin-pwa-192x192.png',
   '/admin-pwa-512x512.png',
 ];
 
 /**
+ * ساخت لیست نهایی آدرس‌ها برای precache
+ */
+function collectPrecacheUrls() {
+    const urls = new Set(customUrlsToCache);
+
+    for (const asset of precachedAssets) {
+        const rawUrl = typeof asset === 'string' ? asset : asset && asset.url;
+        if (!rawUrl) continue;
+        // آدرس‌های manifest نسبی هستند و باید مطلق شوند
+        urls.add(new URL(rawUrl, self.registration.scope).pathname);
+    }
+
+    return [...urls];
+}
+
+/**
  * رویداد Install: ذخیره فایل‌ها در کش
+ * نکته: عمداً skipWaiting صدا زده نمی‌شود تا صفحه‌ی باز با نسخه‌ی قدیمی نشکند.
+ * فعال‌سازی با تأیید کاربر (پیام SKIP_WAITING) انجام می‌شود.
  */
 self.addEventListener('install', (event) => {
-    self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_STATIC_ASSETS)
-            .then((cache) => {
-                console.log('Installing new SW version:', BUILD_HASH);
+    event.waitUntil((async () => {
+        console.log('Installing new SW version:', BUILD_HASH);
+        const cache = await caches.open(CACHE_STATIC_ASSETS);
 
-                // کش کردن آدرس‌های دستی
-                cache.addAll(customUrlsToCache);
-
-                // کش کردن فایل‌های بیلد شده (index.html, JS, CSS و غیره)
-                const urlsFromManifest = precachedAssets.map(asset =>
-                    typeof asset === 'string' ? asset : asset.url
-                );
-                return cache.addAll(urlsFromManifest.filter(url => url));
-            }).catch(err => console.warn('Install Cache Warning:', err))
-    );
+        await Promise.all(collectPrecacheUrls().map(async (url) => {
+            try {
+                // cache: 'reload' یعنی حتماً از شبکه بخوان، نه از HTTP cache مرورگر
+                const response = await fetch(new Request(url, { cache: 'reload', credentials: 'same-origin' }));
+                if (response && response.ok) {
+                    await cache.put(url, response);
+                }
+            } catch (error) {
+                console.warn('Precache skipped:', url, error);
+            }
+        }));
+    })());
 });
 
 /**
- * رویداد Activate: حذف کش‌های قدیمی
+ * رویداد Activate: حذف کش‌های قدیمی و گرفتن کنترل صفحه‌ها
  */
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    // اگر نام کش با پیشوند ما شروع می‌شود اما با ورژن فعلی متفاوت است، حذفش کن
-                    if (cacheName.startsWith('todo-app-assets-v') && cacheName !== CACHE_STATIC_ASSETS) {
-                        console.log('Deleting outdated cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        }).then(() => self.clients.claim())
-    );
+    event.waitUntil((async () => {
+        const cacheNames = await caches.keys();
+
+        await Promise.all(cacheNames.map((cacheName) => {
+            // اگر نام کش با پیشوند ما شروع می‌شود اما با ورژن فعلی متفاوت است، حذفش کن
+            if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_STATIC_ASSETS) {
+                console.log('Deleting outdated cache:', cacheName);
+                return caches.delete(cacheName);
+            }
+            return null;
+        }));
+
+        await self.clients.claim();
+    })());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -71,7 +93,9 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (request.mode === 'navigate' || url.pathname.endsWith('.webmanifest')) {
-        event.respondWith(networkFirst(request, '/'));
+        // هر اپ باید به سند ورودی خودش برگردد تا manifest اشتباه سرو نشود
+        const isAdminPath = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+        event.respondWith(networkFirst(request, isAdminPath ? '/admin.html' : '/'));
         return;
     }
 
@@ -79,23 +103,24 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function networkFirst(request, fallbackUrl = null) {
+    const cache = await caches.open(CACHE_STATIC_ASSETS);
+
     try {
         const response = await fetch(request, { cache: 'no-store' });
 
         if (response && response.ok) {
-            const cache = await caches.open(CACHE_STATIC_ASSETS);
             await cache.put(request, response.clone());
         }
 
         return response;
     } catch (error) {
-        const cachedResponse = await caches.match(request);
+        const cachedResponse = await cache.match(request);
         if (cachedResponse) {
             return cachedResponse;
         }
 
         if (fallbackUrl) {
-            const fallbackResponse = await caches.match(fallbackUrl);
+            const fallbackResponse = (await cache.match(fallbackUrl)) || (await cache.match('/index.html'));
             if (fallbackResponse) {
                 return fallbackResponse;
             }
@@ -106,8 +131,18 @@ async function networkFirst(request, fallbackUrl = null) {
 }
 
 async function cacheFirst(request) {
-    const cachedResponse = await caches.match(request);
-    return cachedResponse || fetch(request);
+    // فقط کش نسخه‌ی جاری خوانده می‌شود تا فایل نسخه‌های قبلی برگردانده نشود
+    const cache = await caches.open(CACHE_STATIC_ASSETS);
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) return cachedResponse;
+
+    const response = await fetch(request);
+
+    if (response && response.ok && response.type === 'basic') {
+        cache.put(request, response.clone()).catch(() => {});
+    }
+
+    return response;
 }
 
 /**
@@ -241,10 +276,31 @@ async function openOrFocus(url) {
 
 /**
  * مدیریت پیام‌های SKIP_WAITING برای آپدیت فوری سرویس ورکر
+ * و HARD_RESET برای پاکسازی کامل بدون حذف PWA از دستگاه
  */
 self.addEventListener('message', (event) => {
-  if (event.data && (event.data.action === 'skipWaiting' || event.data.type === 'SKIP_WAITING')) {
+  const data = event.data || {};
+
+  if (data.action === 'skipWaiting' || data.type === 'SKIP_WAITING') {
     self.skipWaiting();
-    self.clients.claim();
+    return;
+  }
+
+  if (data.type === 'GET_VERSION') {
+    event.source && event.source.postMessage({ type: 'SW_VERSION', version: BUILD_HASH });
+    return;
+  }
+
+  if (data.type === 'HARD_RESET') {
+    event.waitUntil((async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      await self.registration.unregister();
+
+      const openClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of openClients) {
+        client.postMessage({ type: 'HARD_RESET_DONE' });
+      }
+    })());
   }
 });

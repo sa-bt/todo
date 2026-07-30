@@ -28,38 +28,22 @@ export default defineConfig({
         swDest: 'dist/sw.js'
       },
 
-      manifest: {
-        name: 'Do It',
-        id: '/',
-        short_name: 'Todo',
-        description: 'مدیریت تسک‌ها و اهداف روزانه',
-        theme_color: '#2563EB',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-  {
-    src: '/pwa-192x192.png',
-    sizes: '192x192',
-    type: 'image/png',
-    purpose: 'any' // آیکون معمولی
-  },
-  {
-    src: '/pwa-512x512.png',
-    sizes: '512x512',
-    type: 'image/png',
-    purpose: 'any' // برای مچ شدن با لانچرهای مختلف گوشی
-  },
-  {
-    src: '/pwa-180x180.png', // آدرس فایل بج که ساختی
-    sizes: '96x96',
-    type: 'image/png',
-    purpose: 'monochrome' // 👈 این خیلی مهمه! به سیستم می‌گه این تک‌رنگه
-  }
-],
-      },
+      // ⚠️ منبع یگانه‌ی حقیقت برای manifest، فایل‌های استاتیک زیر public/ هستند:
+      //    public/manifest.webmanifest (اپ کاربر) و public/admin-manifest.webmanifest (پنل مدیریت).
+      //    اگر این false نباشد، پلاگین dist/manifest.webmanifest را بازنویسی می‌کند و
+      //    یک تگ <link rel="manifest"> تکراری هم به HTML تزریق می‌کند.
+      manifest: false,
     }),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        // هر اپ نصب‌شدنی سند ورودی خودش را دارد تا هویت PWA ثابت بماند
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        admin: fileURLToPath(new URL('./admin.html', import.meta.url)),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
-import { toPersianDate } from '@/utils/date'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { toPersianDate, toPersianNumber } from '@/utils/date'
 import { useGoalsStore } from '@/stores/goals'
+import api from '@/plugins/axios'
+import { useActivityPaletteStore } from '@/stores/activityPalette'
 
 import {
   Pencil,
@@ -29,6 +31,11 @@ import GoalStatsModal from './GoalStatsModal.vue'
 
 
 const store = useGoalsStore()
+
+// نوار کوچک هدف با نقشه صفحه گزارش یک رنگ‌بندی دارد.
+const palette = useActivityPaletteStore()
+const getLevel = (total, done) => palette.getLevel(total, done)
+
 const emit = defineEmits(['onEdit', 'onDelete', 'onAddTask'])
 
 // ---------------- UX: دیبونس جستجو + نرمال‌سازی فارسی ----------------
@@ -112,6 +119,76 @@ const filteredGoals = computed(() =>
     return matchSearch && matchStatus && matchPriority
   })
 )
+
+// ---------------- نوار سی روز اخیر ----------------
+/*
+ * یک درخواست برای همه اهداف، نه یکی به ازای هر کارت.
+ * سرور فهرست روزها را یک بار می‌فرستد و برای هر هدف دو آرایه هم‌ترازِ همان
+ * فهرست. هدفی که در این پنجره تسکی نداشته اصلاً فرستاده نمی‌شود و اینجا
+ * خالی کشیده می‌شود.
+ *
+ * داده هنگام ورود به صفحه گرفته می‌شود. تسکی که همین حالا ساخته یا انجام شود
+ * تا تازه‌سازی بعدی در نوار دیده نمی‌شود.
+ */
+const activity = ref({ days: [], goals: {} })
+const activityLoading = ref(true)
+
+async function fetchGoalActivity() {
+  activityLoading.value = true
+
+  try {
+    const res = await api.get('/reports/goal-activity')
+    const data = res.data?.data || {}
+
+    activity.value = { days: data.days || [], goals: data.goals || {} }
+  } catch (e) {
+    console.error('fetchGoalActivity error:', e)
+    activity.value = { days: [], goals: {} }
+  } finally {
+    activityLoading.value = false
+  }
+}
+
+onMounted(fetchGoalActivity)
+
+// نوار هر هدف یک بار ساخته می‌شود، نه در هر بار رسم کارت‌ها.
+const stripsByGoal = computed(() => {
+  const strips = {}
+
+  ;(store.goals || []).forEach((goal) => {
+    const series = activity.value.goals[goal.id]
+
+    strips[goal.id] = activity.value.days.map((day, i) => {
+      const total = series?.total?.[i] ?? 0
+      const done = series?.done?.[i] ?? 0
+
+      return {
+        day,
+        total,
+        done,
+        level: getLevel(total, done),
+        title: total
+          ? `${toPersianDate(day)} — ${toPersianNumber(done)} از ${toPersianNumber(total)}`
+          : `${toPersianDate(day)} — بدون تسک`,
+      }
+    })
+  })
+
+  return strips
+})
+
+const stripSummary = computed(() => {
+  const summary = {}
+
+  Object.entries(stripsByGoal.value).forEach(([goalId, cells]) => {
+    const activeDays = cells.filter((cell) => cell.total > 0).length
+    const perfectDays = cells.filter((cell) => cell.total > 0 && cell.done === cell.total).length
+
+    summary[goalId] = { activeDays, perfectDays }
+  })
+
+  return summary
+})
 
 // ---------------- مودال آمار ----------------
 const showStatsModal = ref(false)
@@ -315,6 +392,33 @@ async function proceedDelete() {
                 />
               </div>
             </div>
+
+            <!-- نوار سی روز اخیر -->
+            <div class="pt-3">
+              <div class="flex items-center justify-between text-xs text-text-secondary mb-1.5">
+                <span v-if="!activityLoading && stripSummary[goal.id]">
+                  {{ toPersianNumber(stripSummary[goal.id].perfectDays) }} روز کامل از
+                  {{ toPersianNumber(stripSummary[goal.id].activeDays) }} روز فعال
+                </span>
+                <span v-else>&nbsp;</span>
+                <span>{{ toPersianNumber(activity.days.length || 30) }} روز اخیر</span>
+              </div>
+
+              <div v-if="activityLoading" class="strip strip-loading" />
+              <div
+                v-else
+                class="strip"
+                :style="{ gridTemplateColumns: `repeat(${activity.days.length}, 1fr)` }"
+              >
+                <span
+                  v-for="cell in stripsByGoal[goal.id]"
+                  :key="cell.day"
+                  class="strip-cell"
+                  :style="{ backgroundColor: palette.colors[cell.level] }"
+                  :title="cell.title"
+                />
+              </div>
+            </div>
           </template>
 
           <div v-else class="text-sm text-text-secondary/80 pt-3 mt-3">
@@ -434,6 +538,31 @@ async function proceedDelete() {
 }
 .card-bg {
   background-color: var(--color-background);
+}
+
+/* ---------------- نوار سی روز اخیر ---------------- */
+/*
+ * جهت نوار از صفحه به ارث می‌رسد، پس قدیمی‌ترین روز سمت راست و امروز سمت چپ
+ * می‌نشیند. همان ترتیبی که نقشه حرارتی صفحه گزارش دارد.
+ */
+.strip {
+  display: grid;
+  gap: 2px;
+  height: 14px;
+}
+.strip-cell {
+  border-radius: 2px;
+  background: var(--color-background-mute);
+}
+.strip-loading {
+  border-radius: 3px;
+  background: var(--color-background-mute);
+  opacity: 0.6;
+  animation: strip-pulse 1.4s ease-in-out infinite;
+}
+@keyframes strip-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
 }
 
 /* ---------------- Ribbon (مینیمال) ---------------- */

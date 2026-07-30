@@ -3,7 +3,7 @@
 import * as jalaali from 'jalaali-js'
 
 // نام ماه‌های شمسی برای نمایش در UI
-const SHAMSI_MONTH_NAMES = [
+export const SHAMSI_MONTH_NAMES = [
   'فروردین',
   'اردیبهشت',
   'خرداد',
@@ -19,6 +19,19 @@ const SHAMSI_MONTH_NAMES = [
 ]
 
 const DAY_NAMES = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
+
+// هفته از شنبه شروع می‌شود. همین ترتیب در گزارش‌ها و اعلان هفتگی هم به کار می‌رود.
+export const WEEK_DAY_NAMES_SHORT = DAY_NAMES
+
+export const WEEK_DAY_NAMES_LONG = [
+  'شنبه',
+  'یک‌شنبه',
+  'دوشنبه',
+  'سه‌شنبه',
+  'چهارشنبه',
+  'پنج‌شنبه',
+  'جمعه',
+]
 
 const pad = number => number.toString().padStart(2, '0')
 

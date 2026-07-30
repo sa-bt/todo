@@ -124,4 +124,5 @@ When the frontend contains conflicting contracts, identify the conflict and obta
 
 - Architecture and navigation reference: `docs/CODEBASE_MAP.md`
 - Confirmed business context: `docs/PROJECT_CONTEXT.md`
+- Reporting feature roadmap and completed work: `docs/REPORTS_ROADMAP.md`
 - These documents are aids, not substitutes for inspection. Current source code is the final source of truth.

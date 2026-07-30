@@ -26,6 +26,9 @@ import MonthTab from "@/components/MonthTab.vue"
 import SettingTab from "@/components/SettingTab.vue"
 import Notifications from "../views/Notifications.vue";
 
+// کارت سال، صفحه جداگانه‌ای است نه یکی از تب‌های گزارش.
+const YearReview = () => import("@/views/YearReview.vue")
+
 const routes = [
   // مسیرهای احراز هویت (Login & Register)
   {
@@ -112,6 +115,7 @@ const routes = [
 
       { path: "goals", name: "goals", component: GoalsTab },
       { path: "year", name: "year", component: YearTab },
+      { path: "year-review", name: "yearReview", component: YearReview },
       { path: "week", name: "week", component: WeekTab },
       { path: "month", name: "month", component: MonthTab },
       { path: "day", name: "day", component: DayTab },

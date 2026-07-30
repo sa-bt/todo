@@ -8,11 +8,13 @@
     </main>
 
     <NotificationToast />
+    <UpdateUiVersion />
   </div>
 </template>
 
 <script setup>
 import NotificationToast from '@/components/UI/ToastNotification.vue'
+import UpdateUiVersion from '@/components/UI/UpdateUiVersion.vue'
 import { RouterView, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUserSettingStore } from '@/stores/userSetting'

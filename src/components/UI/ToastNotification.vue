@@ -1,9 +1,11 @@
 <script setup>
 import { computed, watch, onBeforeUnmount } from 'vue'
 import { useNotificationStore } from '@/stores/notification'
+import { useToastSoundStore } from '@/stores/toastSound'
 import { CheckCircle, AlertTriangle, Info, CircleAlert } from 'lucide-vue-next'
 
 const store = useNotificationStore()
+const soundStore = useToastSoundStore()
 let timeout = null
 
 // 🎨 استایل بر اساس نوع پیام
@@ -29,11 +31,9 @@ watch(() => store.message, (newMessage) => {
   if (timeout) clearTimeout(timeout)
 
   if (newMessage) {
-    // 🔊 پخش صدا اگر فعال باشد
+    // 🔊 پخش صدای انتخاب‌شده‌ی کاربر، اگر برای این پیام صدا فعال باشد
     if (store.sound) {
-      const audio = new Audio('/sounds/toast.wav')
-      audio.volume = 0.6
-      audio.play().catch(() => {}) // جلوگیری از خطای autoplay
+      soundStore.play()
     }
 
     // ⏱ پاک شدن خودکار بر اساس مدت‌زمان ارسال‌شده از بک‌اند

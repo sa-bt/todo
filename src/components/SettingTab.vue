@@ -5,13 +5,31 @@ import { registerWebPush, requestNotificationPermission } from '@/utils/webpush'
 // ✅ استورها
 import { useNotificationStore } from '@/stores/notification'
 import { useUserSettingStore } from '@/stores/userSetting'
+import { useToastSoundStore } from '@/stores/toastSound'
 
 // ✅ کامپوننت‌های Base
+import PaletteEditor from '@/components/Activity/PaletteEditor.vue'
 import BaseCheckbox from '@/components/UI/BaseCheckbox.vue'
 import BaseTimeSelect from '@/components/UI/BaseTimeSelect.vue'
+import BaseSelect from '@/components/UI/BaseSelect.vue'
+
+import { Volume2 } from 'lucide-vue-next'
 
 const notificationStore = useNotificationStore()
 const userSetting = useUserSettingStore()
+const toastSound = useToastSoundStore()
+
+/*
+| صدای اعلان روی همین دستگاه ذخیره می‌شود، پس مستقل از دکمه ذخیره است
+| و با هر تغییر بلافاصله اعمال و یک‌بار پخش می‌شود.
+*/
+const selectedSound = computed({
+  get: () => toastSound.current,
+  set: (value) => {
+    toastSound.setSound(value)
+    toastSound.play()
+  },
+})
 
 // 💡 اتصال مستقیم state استور به v-modelها
 const dailyReport = ref(false)
@@ -19,6 +37,21 @@ const reportTime = ref('08:00')
 const taskReminder = ref(false)
 const taskReminderTime = ref('09:00')
 const perTaskProgress = ref(false)
+const weeklyReport = ref(false)
+const weeklyReportDay = ref(6)
+const weeklyReportTime = ref('20:00')
+const dropAlert = ref(false)
+
+// شنبه صفر است و جمعه شش، همان شماره‌گذاری نمودار روزهای هفته در صفحه گزارش.
+const weekDayOptions = [
+  { value: 0, label: 'شنبه' },
+  { value: 1, label: 'یک‌شنبه' },
+  { value: 2, label: 'دوشنبه' },
+  { value: 3, label: 'سه‌شنبه' },
+  { value: 4, label: 'چهارشنبه' },
+  { value: 5, label: 'پنج‌شنبه' },
+  { value: 6, label: 'جمعه' },
+]
 
 const notificationPermission = ref(typeof Notification !== 'undefined' ? Notification.permission : 'denied')
 const showHelp = ref(false)
@@ -59,6 +92,10 @@ async function loadSetting() {
   perTaskProgress.value = userSetting.per_task_progress
   reportTime.value = userSetting.report_time
   taskReminderTime.value = userSetting.task_reminder_time
+  weeklyReport.value = userSetting.weekly_report
+  weeklyReportDay.value = userSetting.weekly_report_day
+  weeklyReportTime.value = userSetting.weekly_report_time
+  dropAlert.value = userSetting.drop_alert
 }
 
 // ذخیره تنظیمات از طریق استور
@@ -71,12 +108,16 @@ async function saveSetting() {
     userSetting.per_task_progress = perTaskProgress.value
     userSetting.report_time = reportTime.value
     userSetting.task_reminder_time = taskReminderTime.value
+    userSetting.weekly_report = weeklyReport.value
+    userSetting.weekly_report_day = weeklyReportDay.value
+    userSetting.weekly_report_time = weeklyReportTime.value
+    userSetting.drop_alert = dropAlert.value
 
     await userSetting.save()
 
     // ✅ ثبت webpush فقط اگر لازم بود
     const needsWebPush =
-        (dailyReport.value || taskReminder.value || perTaskProgress.value) &&
+        (dailyReport.value || weeklyReport.value || dropAlert.value || taskReminder.value || perTaskProgress.value) &&
         notificationPermission.value === 'granted'
 
     if (needsWebPush) await registerWebPush()
@@ -100,8 +141,8 @@ async function requestPermission() {
 }
 
 // Watch برای فعال‌سازی مجوزها در صورت نیاز
-watch([dailyReport, taskReminder, perTaskProgress], async ([daily, task, per]) => {
-  if (daily || task || per) {
+watch([dailyReport, weeklyReport, dropAlert, taskReminder, perTaskProgress], async ([daily, weekly, drop, task, per]) => {
+  if (daily || weekly || drop || task || per) {
     if (notificationPermission.value === 'default') {
       const perm = await requestNotificationPermission()
       notificationPermission.value = perm
@@ -152,7 +193,68 @@ onMounted(loadSetting)
       </Transition>
     </div>
 
-    <!-- ۲. یادآوری تسک‌ها -->
+    <!-- ۲. گزارش هفتگی -->
+    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-secondary)] shadow-sm space-y-4">
+      <div class="flex items-start justify-between">
+        <div class="flex flex-col flex-1 gap-1">
+          <h3 class="font-semibold text-[var(--color-heading)]">گزارش هفتگی</h3>
+          <p class="text-[var(--color-text-secondary)] text-sm">جمع‌بندی هفت روز گذشته، همراه با مقایسه با هفته قبل.</p>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <BaseCheckbox
+              v-model="weeklyReport"
+              name="weekly_report_toggle"
+              label=""
+              class="w-fit h-fit p-0 m-0 !bg-transparent !border-0"
+          />
+        </div>
+      </div>
+
+      <Transition name="slide-fade-down">
+        <div v-if="weeklyReport" class="pt-3 mt-3 border-t border-token/50 space-y-4">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-[var(--color-text-secondary)]">روز ارسال</span>
+            <BaseSelect
+                v-model="weeklyReportDay"
+                name="weekly_report_day_select"
+                :options="weekDayOptions"
+            />
+          </div>
+
+          <BaseTimeSelect
+              v-model="weeklyReportTime"
+              name="weekly_report_time_select"
+              label="زمان ارسال گزارش"
+              placeholder="مثال: 20:00"
+          />
+        </div>
+      </Transition>
+    </div>
+
+    <!-- ۳. هشدار افت -->
+    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-secondary)] shadow-sm space-y-4">
+      <div class="flex items-start justify-between">
+        <div class="flex flex-col flex-1 gap-1">
+          <h3 class="font-semibold text-[var(--color-heading)]">هشدار افت</h3>
+          <p class="text-[var(--color-text-secondary)] text-sm">
+            اگر بازدهی‌ات دو هفته پیاپی پایین بیاید، شنبه صبح یک یادآوری کوتاه می‌گیری.
+            حداکثر هر دو هفته یک بار.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <BaseCheckbox
+              v-model="dropAlert"
+              name="drop_alert_toggle"
+              label=""
+              class="w-fit h-fit p-0 m-0 !bg-transparent !border-0"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- ۴. یادآوری تسک‌ها -->
     <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-accent)] shadow-sm space-y-4">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
@@ -184,7 +286,7 @@ onMounted(loadSetting)
       </Transition>
     </div>
 
-    <!-- ۳. اعلان پیشرفت لحظه‌ای -->
+    <!-- ۵. اعلان پیشرفت لحظه‌ای -->
     <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-green-500 shadow-sm">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
@@ -201,6 +303,38 @@ onMounted(loadSetting)
               class="w-fit h-fit p-0 m-0 !bg-transparent !border-0"
           />
         </div>
+      </div>
+    </div>
+
+    <!-- ۶. صدای اعلان‌های داخل برنامه -->
+    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-purple-500 shadow-sm space-y-4">
+      <div class="flex flex-col gap-1">
+        <h3 class="font-semibold text-[var(--color-heading)]">صدای اعلان</h3>
+        <p class="text-[var(--color-text-secondary)] text-sm">
+          صدایی که هنگام نمایش پیام‌های داخل برنامه پخش می‌شود. این انتخاب روی همین دستگاه ذخیره می‌شود و نیازی به دکمه ذخیره ندارد.
+        </p>
+      </div>
+
+      <div class="flex items-end gap-3">
+        <BaseSelect
+            v-model="selectedSound"
+            name="toast_sound_select"
+            :options="toastSound.options"
+            class="flex-1"
+        />
+
+        <button
+            type="button"
+            @click="toastSound.play()"
+            :disabled="toastSound.isMuted"
+            class="tap-target shrink-0 inline-flex items-center gap-2 px-4 min-h-[42px] rounded-xl border border-token
+             bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-background-soft)]
+             transition disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="پخش نمونه صدا"
+        >
+          <Volume2 class="w-4 h-4" aria-hidden="true" />
+          <span class="text-sm font-medium">پخش نمونه</span>
+        </button>
       </div>
     </div>
 
@@ -234,6 +368,21 @@ onMounted(loadSetting)
       </span>
       {{ isSaving ? 'در حال ذخیره...' : 'ذخیره تنظیمات' }}
     </button>
+
+    <!--
+      رنگ‌بندی نتایج.
+      جدا از دکمه ذخیره بالا است و دکمه ذخیره خودش را دارد، چون دو تنظیم بی‌ربط
+      زیر یک دکمه کاربر را گمراه می‌کند.
+    -->
+    <div class="mt-10 pt-8 border-t border-token">
+      <h2 class="text-2xl font-bold mb-2 text-[var(--color-heading)] text-center">رنگ‌بندی نتایج</h2>
+      <p class="text-[var(--color-text-secondary)] text-sm text-center mb-6">
+        رنگ هر درصد بازدهی در گزارش‌ها. همین رنگ‌بندی در نقشه سالانه، هفته‌ها، ماه‌ها و کارت اهداف
+        به کار می‌رود و روی همین مرورگر ذخیره می‌شود.
+      </p>
+
+      <PaletteEditor />
+    </div>
 
     <!-- مودال راهنما -->
     <div v-if="showHelp" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">

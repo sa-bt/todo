@@ -11,6 +11,12 @@ export const useUserSettingStore = defineStore('userSetting', {
         task_reminder: false,
         task_reminder_time: '09:00',
         per_task_progress: false,
+        weekly_report: false,
+        // شنبه صفر است و جمعه شش، همان شماره‌گذاری نمودار روزهای هفته.
+        weekly_report_day: 6,
+        weekly_report_time: '20:00',
+        // هشدار افت روز و ساعت ندارد. شنبه صبح فرستاده می‌شود.
+        drop_alert: false,
     }),
 
     actions: {
@@ -29,9 +35,13 @@ export const useUserSettingStore = defineStore('userSetting', {
                 this.daily_report = Boolean(data.daily_report ?? false)
                 this.task_reminder = Boolean(data.task_reminder ?? false)
                 this.per_task_progress = Boolean(data.per_task_progress ?? false)
+                this.weekly_report = Boolean(data.weekly_report ?? false)
+                this.drop_alert = Boolean(data.drop_alert ?? false)
+                this.weekly_report_day = Number.isInteger(data.weekly_report_day) ? data.weekly_report_day : 6
 
                 this.report_time = data.report_time?.substring(0, 5) || '08:00'
                 this.task_reminder_time = data.task_reminder_time?.substring(0, 5) || '09:00'
+                this.weekly_report_time = data.weekly_report_time?.substring(0, 5) || '20:00'
 
                 this.loaded = true
 
@@ -53,6 +63,10 @@ export const useUserSettingStore = defineStore('userSetting', {
                     task_reminder: this.task_reminder,
                     task_reminder_time: this.task_reminder_time,
                     per_task_progress: this.per_task_progress,
+                    weekly_report: this.weekly_report,
+                    weekly_report_day: this.weekly_report_day,
+                    weekly_report_time: this.weekly_report_time,
+                    drop_alert: this.drop_alert,
                 })
 
                 // ✅ نمایش پیام موفقیت واضح و هماهنگ با تم Toast
