@@ -40,6 +40,7 @@ export default defineConfig({
       input: {
         // هر اپ نصب‌شدنی سند ورودی خودش را دارد تا هویت PWA ثابت بماند
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        en: fileURLToPath(new URL('./en.html', import.meta.url)),
         admin: fileURLToPath(new URL('./admin.html', import.meta.url)),
       },
     },

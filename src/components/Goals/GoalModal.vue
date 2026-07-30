@@ -62,6 +62,17 @@ const isParentSelectDisabled = computed(() => {
   return g.tasks_count > 0 || g.children_count > 0
 })
 
+/*
+ * هدفی که زیرمجموعه دارد، خودش تسک نمی‌گیرد. اولویت هم فقط از راه تسک به وزن
+ * تبدیل می‌شود، پس اولویت چنین هدفی روی هیچ درصدی اثر ندارد و نشان دادنش
+ * خلاف واقع است.
+ *
+ * فقط از فرم پنهان می‌شود، نه از داده. مقدار ذخیره‌شده همراه فرم فرستاده
+ * می‌شود تا اگر روزی زیرمجموعه‌ها حذف شدند و هدف دوباره برگ شد، وزنش بی‌صدا
+ * به متوسط برنگردد.
+ */
+const isParentGoal = computed(() => (props.editingGoal?.children_count ?? 0) > 0)
+
 // ---- Form Handlers ----
 function resetForm() {
   title.value = ''
@@ -206,10 +217,19 @@ async function save() {
               </p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4" :class="{ 'sm:grid-cols-2': !isParentGoal }">
               <BaseSelect name="status" label="وضعیت" v-model="status" :options="statusOptions" />
-              <BaseSelect name="priority" label="اولویت" v-model="priority" :options="priorityOptions" />
+              <BaseSelect
+                v-if="!isParentGoal"
+                name="priority"
+                label="اولویت"
+                v-model="priority"
+                :options="priorityOptions"
+              />
             </div>
+            <p v-if="isParentGoal" class="text-xs text-text-secondary -mt-2">
+              این هدف زیرمجموعه دارد و خودش تسک نمی‌گیرد، پس اولویتش در محاسبه بازدهی اثری ندارد.
+            </p>
 
             <BaseCheckbox
               name="send_task_reminder"

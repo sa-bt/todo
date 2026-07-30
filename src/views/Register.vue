@@ -166,7 +166,28 @@
                 class="w-full max-w-sm bg-[var(--color-background)] shadow-2xl rounded-2xl p-6 border border-[var(--color-border)] transform transition-transform duration-300 scale-100"
                 role="dialog" aria-modal="true" aria-labelledby="otp-title" dir="rtl"
             >
-                <form @submit.prevent="verifyOtp">
+                <!-- ایمیل تأیید شد؛ از اینجا به بعد توپ در زمین مدیر است -->
+                <div v-if="awaitingApproval" class="text-center">
+                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
+                        <Clock class="h-7 w-7 text-amber-500" aria-hidden="true" />
+                    </div>
+                    <h2 id="otp-title" class="text-2xl font-extrabold text-[var(--color-heading)]">
+                        در انتظار تأیید مدیر
+                    </h2>
+                    <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+                        ایمیل <span class="font-bold" dir="ltr">{{ otpEmail }}</span> تأیید شد.
+                        حساب شما پس از بررسی و تأیید مدیر فعال می‌شود و نتیجه را با ایمیل به شما خبر می‌دهیم.
+                    </p>
+                    <button
+                        type="button"
+                        class="mt-6 w-full rounded-2xl bg-[var(--color-primary)] py-3 px-4 font-semibold text-white shadow-sm transition active:scale-[0.99]"
+                        @click="goToLogin"
+                    >
+                        رفتن به صفحهٔ ورود
+                    </button>
+                </div>
+
+                <form v-else @submit.prevent="verifyOtp">
                     <div class="text-center mb-6">
                         <h2 id="otp-title" class="text-2xl font-extrabold text-[var(--color-heading)]">تأیید کد</h2>
                         <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
@@ -229,13 +250,10 @@
 
 <script setup>
 import { ref, onMounted, nextTick, computed, watch } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import { useRouter, RouterLink } from 'vue-router'
-import { registerWebPush } from '@/utils/webpush'
 
-import { LoaderCircle, RefreshCw, X, Check } from 'lucide-vue-next'
+import { LoaderCircle, RefreshCw, X, Check, Clock } from 'lucide-vue-next'
 
-const auth = useAuthStore()
 const router = useRouter()
 
 const API_BASE = import.meta.env.VITE_API_BASE 
@@ -264,6 +282,8 @@ const otpLoading = ref(false)
 const otpFieldError = ref('')
 const otpSuccessMessage = ref('')
 const resendTimer = ref(0)
+// ایمیل تأیید شده و حساب در صف اجازهٔ مدیر نشسته است.
+const awaitingApproval = ref(false)
 
 
 // --- Computed Properties ---
@@ -562,20 +582,23 @@ async function verifyOtp() {
       return
     }
 
+    /*
+     * تأیید ایمیل دیگر توکن نمی‌دهد. حساب تا وقتی مدیر اجازه ندهد بسته است،
+     * پس اینجا نه setAuth معنا دارد و نه ثبت وب‌پوش که به توکن نیاز دارد.
+     */
     otpSuccessMessage.value = data.message
-    auth.setAuth({ user: data.data.user, token: data.data.token })
-    await registerWebPush()
-    
-    setTimeout(() => {
-      router.push({ name: 'goals' }) 
-    }, 1200)
+    awaitingApproval.value = true
 
   } catch (e) {
     otpFieldError.value = 'خطای ارتباطی رخ داد.'
   } finally {
     otpLoading.value = false
-    if (!otpSuccessMessage.value) globalLoading.value = false 
+    globalLoading.value = false
   }
+}
+
+function goToLogin() {
+  router.push({ name: 'login' })
 }
 
 async function resendCode() {

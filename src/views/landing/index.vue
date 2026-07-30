@@ -172,8 +172,25 @@ import Footer from "../../components/Landing/Footer.vue";
 import LogoAB from '../../components/LogoAB.vue'
 
 // --- Setup I18n ---
+const props = defineProps({
+  locale: {
+    type: String,
+    required: true,
+    validator: value => ['fa', 'en'].includes(value),
+  },
+})
+
 const { locale } = useI18n()
 const isFa = computed(() => locale.value.startsWith('fa'))
+
+watch(
+  () => props.locale,
+  value => {
+    locale.value = value
+    localStorage.setItem('lang', value)
+  },
+  { immediate: true },
+)
 
 // --- Menu Data ---
 const menuItems = [

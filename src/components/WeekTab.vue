@@ -5,6 +5,7 @@ import { useGoalsStore } from '@/stores/goals'
 import TaskStatsCard from '@/components/Days/Card.vue'
 import Table from '@/components/Week/Table.vue'
 import { getShamsiWeekRange } from '@/utils/jalali'
+import { weightedPercent } from '@/utils/taskWeight'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
 import BaseTooltip from '@/components/UI/BaseTooltip.vue'
 import { Lock } from 'lucide-vue-next'
@@ -67,9 +68,8 @@ const tasksRows = computed(() => {
 })
 
 const completedCount = computed(() => weekTasks.value.filter(t => t.is_done).length)
-const completedPercent = computed(() =>
-    weekTasks.value.length ? (completedCount.value / weekTasks.value.length) * 100 : 0
-)
+// شمارش بالا شمارش می‌ماند، درصد از اولویت هدف‌ها اثر می‌گیرد.
+const completedPercent = computed(() => weightedPercent(weekTasks.value))
 
 const isTaskExisting = (day) => {
   return tasksStore.tasks.some(t => t.goal_id === selectedGoalId.value && t.day === day)

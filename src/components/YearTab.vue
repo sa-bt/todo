@@ -12,12 +12,26 @@ import {
 import BaseSelect from './UI/BaseSelect.vue'
 import PaletteEditor from './Activity/PaletteEditor.vue'
 import { toPersianNumber } from '@/utils/number'
+import { weightedPercent } from '@/utils/taskWeight'
 import { useActivityPaletteStore } from '@/stores/activityPalette'
 import {
   SHAMSI_MONTH_NAMES as monthNames,
   WEEK_DAY_NAMES_SHORT as weekDaysShort,
   WEEK_DAY_NAMES_LONG as weekDaysLong,
 } from '@/utils/jalali'
+/*
+ * تحلیل روزها (جمع‌بندی، الگوی روزهای هفته، زنجیره و جمله‌های بینش) از این صفحه
+ * بیرون کشیده شد تا آزمون‌پذیر باشد. تصمیم‌ها و نگهبان‌های هر محاسبه، همراه خودش
+ * به همان فایل رفتند.
+ */
+import {
+  buildInsights,
+  computeStreak,
+  previousPeriodStats,
+  summarizeDays,
+  weekdayBuckets,
+  weekdayInsightOf,
+} from '@/utils/activityInsights'
 
 /* ===== تنظیمات ظاهری ===== */
 /*
@@ -42,9 +56,6 @@ const TAB_LABELS = {
   goals: 'اهداف',
   pattern: 'الگو',
 }
-
-// «شنبه» به «شنبه‌ها». نیم‌فاصله عمدی است.
-const pluralizeWeekday = label => `${label}‌ها`
 
 /* ===== تشخیص زمان ===== */
 const todayObj = jalaali.toJalaali(new Date())
@@ -466,17 +477,29 @@ const gridDays = computed(() => {
     const dateObj = addDays(start, i)
     const { jy, jm, jd } = jalaali.toJalaali(dateObj)
     const key = `${jy}-${jm}-${jd}`
+    /*
+     * هر روز چهار عدد دارد، نه دو تا.
+     *
+     * `total` و `done` شمار تسک‌اند و هرجا عددی به کاربر نشان داده می‌شود از
+     * همین دو می‌آید. `totalWeight` و `doneWeight` جمع وزن‌اند و فقط درصد و
+     * رنگ سطح را می‌سازند. سرور هر چهار را می‌فرستد.
+     *
+     * پیش‌فرض وزن برابر شمارش گرفته شده تا اگر روزی پاسخ سرور قدیمی باشد،
+     * صفحه به رفتار قبلی برگردد نه به صفر.
+     */
     const d = activitiesData.value[key] || { total: 0, done: 0 }
+    const totalWeight = d.total_weight ?? d.total
+    const doneWeight = d.done_weight ?? d.done
     const dayNum = toNumeric(jy, jm, jd)
     const isFuture = dayNum > todayNumeric
 
     return {
       rowIndex: (i + startWeekday) % 7, colIndex: Math.floor((i + startWeekday) / 7),
-      key, jy, jm, jd, total: d.total, done: d.done,
+      key, jy, jm, jd, total: d.total, done: d.done, totalWeight, doneWeight,
       numeric: dayNum,
       gDate: formatGregorian(dateObj),
-      percent: d.total ? Math.round((d.done / d.total) * 100) : 0,
-      level: getLevel(d.total, d.done, isFuture),
+      percent: totalWeight ? Math.round((doneWeight / totalWeight) * 100) : 0,
+      level: getLevel(totalWeight, doneWeight, isFuture),
       dateStart: `${jy}/${jm}/${jd}`, isFuture
     }
   })
@@ -539,126 +562,26 @@ const rangeLabel = computed(() => {
   return `${days[0].dateStart} تا ${days[days.length - 1].dateStart}`
 })
 
-/**
- * جمع‌بندی یک دسته روز. فقط روزهای گذشته و امروز می‌آیند، مطابق منطق سرور.
- *
- * هم کارت‌های آمار و هم مقایسه با دوره قبل از همین یک فرمول استفاده می‌کنند،
- * تا دو عدد کنار هم با دو تعریف متفاوت ساخته نشوند.
- */
-function summarizeDays(days) {
-  let total = 0
-  let done = 0
-  let perfect = 0
-  let inactive = 0
-
-  days.forEach(day => {
-    if (day.numeric > todayNumeric) return
-
-    total += day.total
-    done += day.done
-
-    if (day.total > 0 && day.done === day.total) perfect++
-    if (day.total === 0) inactive++
-  })
-
-  return {
-    total,
-    done,
-    perfect,
-    inactive,
-    avg: total > 0 ? Math.round((done / total) * 1000) / 10 : 0,
-  }
-}
-
 // آمار کارت‌ها، تابع بازه انتخاب‌شده.
-const rangeStats = computed(() => summarizeDays(visibleDays.value))
+const rangeStats = computed(() => summarizeDays(visibleDays.value, todayNumeric))
 
 /* ===== الگوی روزهای هفته ===== */
 /*
- * rowIndex همان جایگاه روز در ستون نقشه حرارتی است و از شنبه شروع می‌شود،
- * پس بدون محاسبه دوباره تقویم می‌شود روزهای هفته را جدا کرد.
+ * تفکیک در پیمانه تحلیل انجام می‌شود؛ سطح رنگ اینجا اضافه می‌شود، چون پالت کاربر
+ * حالت است و آن پیمانه حالت ندارد.
  */
-const weekdayStats = computed(() => {
-  const buckets = weekDaysLong.map((label, index) => ({ index, label, total: 0, done: 0, days: 0 }))
-
-  visibleDays.value.forEach(day => {
-    if (day.numeric > todayNumeric) return
-
-    const bucket = buckets[day.rowIndex]
-
-    bucket.total += day.total
-    bucket.done += day.done
-
-    if (day.total > 0) bucket.days++
-  })
-
-  return buckets.map(bucket => ({
+const weekdayStats = computed(() =>
+  weekdayBuckets(visibleDays.value, todayNumeric, weekDaysLong).map(bucket => ({
     ...bucket,
-    percent: bucket.total ? Math.round((bucket.done / bucket.total) * 1000) / 10 : 0,
-    level: getLevel(bucket.total, bucket.done),
+    level: getLevel(bucket.totalWeight, bucket.doneWeight),
   }))
-})
+)
 
-// با داده کم، جمله «قوی‌ترین روز» ادعای بی‌پشتوانه می‌شود.
-const MIN_ACTIVE_WEEKDAYS = 3
-
-const weekdayInsight = computed(() => {
-  const active = weekdayStats.value.filter(day => day.total > 0)
-
-  if (active.length < MIN_ACTIVE_WEEKDAYS) return null
-
-  const sorted = [...active].sort((a, b) => b.percent - a.percent)
-  const best = sorted[0]
-  const worst = sorted[sorted.length - 1]
-
-  // وقتی همه روزها یکسان‌اند، هیچ الگویی وجود ندارد.
-  if (best.percent === worst.percent) return null
-
-  return { best, worst }
-})
+const weekdayInsight = computed(() => weekdayInsightOf(weekdayStats.value))
 
 /* ===== زنجیره در سطح بازه ===== */
-/*
- * تعریف روز کامل: روزی که تسک دارد و همه تسک‌هایش انجام شده.
- *
- * تصمیم: روز بدون تسک زنجیره را نمی‌شکند، ولی به آن هم اضافه نمی‌کند.
- * برنامه‌ریزی نکردن برای یک روز شکست نیست، و شمردنش به‌عنوان شکست باعث می‌شد
- * کاربری که آخر هفته استراحت می‌کند هیچ‌وقت زنجیره‌ای بلندتر از پنج روز نبیند.
- *
- * زنجیره مثل بقیه این صفحه محدود به بازه و فیلتر هدف انتخاب‌شده است.
- */
-const streakStats = computed(() => {
-  let current = 0
-  let currentStart = null
-  let best = { length: 0, start: null, end: null }
-  let lastBreak = null
-
-  visibleDays.value.forEach(day => {
-    if (day.numeric > todayNumeric || day.total === 0) return
-
-    if (day.done === day.total) {
-      current++
-
-      if (current === 1) currentStart = day
-
-      // مساوی هم جایگزین می‌شود تا در تساوی، زنجیره تازه‌تر نشان داده شود.
-      if (current >= best.length) best = { length: current, start: currentStart, end: day }
-
-      return
-    }
-
-    current = 0
-    currentStart = null
-    lastBreak = day
-  })
-
-  return {
-    current,
-    currentStart: current ? currentStart : null,
-    best,
-    lastBreak,
-  }
-})
+// زنجیره مثل بقیه این صفحه محدود به بازه و فیلتر هدف انتخاب‌شده است.
+const streakStats = computed(() => computeStreak(visibleDays.value, todayNumeric))
 
 const hasPastActivity = computed(() =>
   visibleDays.value.some(day => day.numeric <= todayNumeric && day.total > 0)
@@ -669,41 +592,9 @@ const hasPastActivity = computed(() =>
  * جمله‌ها از همان داده‌ای ساخته می‌شوند که در صفحه هست، پس درخواست تازه‌ای لازم
  * نیست و همه‌شان تابع بازه و فیلتر هدف انتخاب‌شده‌اند.
  *
- * دو قاعده در ساختن جمله‌ها رعایت شد:
- *
- * یک، هر جمله نگهبان خودش را دارد. جمله‌ای که پشتوانه آماری ندارد ساخته
- * نمی‌شود، حتی اگر فهرست کوتاه بماند. ادعای الگو با داده کم بی‌پشتوانه است.
- *
- * دو، هیچ جمله‌ای چیزی را که کارت‌های بالای صفحه می‌گویند تکرار نمی‌کند.
- * بینش یعنی چیزی که از داده درمی‌آید، نه بازخوانی همان عدد.
+ * قاعده‌ها و آستانه‌های ساختن جمله‌ها در پیمانه تحلیل هستند. اینجا فقط داده همان
+ * لحظه صفحه به آن داده می‌شود.
  */
-const MAX_INSIGHTS = 5
-
-// کمتر از این اختلاف، نوسان است نه روند.
-const INSIGHT_MIN_GAP = 5
-
-const MIN_TREND_WEEKS = 3
-const MIN_STREAK = 3
-const MIN_DAYS_FOR_IDLE_CLAIM = 14
-const IDLE_RATIO = 0.4
-
-const roundPercent = value => Math.round(value)
-
-/**
- * طول دنباله یکنوای انتهایی. برای [۸۰، ۷۰، ۶۰] با جهت نزولی، سه برمی‌گرداند.
- */
-function trailingRun(values, isDown) {
-  let run = 1
-
-  for (let i = values.length - 1; i > 0; i--) {
-    const diff = values[i] - values[i - 1]
-
-    if (isDown ? diff < 0 : diff > 0) run++
-    else break
-  }
-
-  return run
-}
 
 // هفته‌های تمام‌شده‌ای که تسک داشتند. هفته ناقص یا خالی روند نمی‌سازد.
 const trendWeeks = computed(() =>
@@ -711,130 +602,28 @@ const trendWeeks = computed(() =>
 )
 
 /**
- * دوره‌ای هم‌اندازه بازه، دقیقاً پیش از آن.
- *
- * فقط وقتی ساخته می‌شود که کامل داخل نقشه باشد و بازه هم به آینده نکشیده باشد.
- * مقایسه یک بازه نیمه‌تمام با یک دوره کامل، عدد گمراه‌کننده می‌دهد.
+ * دوره‌ای هم‌اندازه بازه، دقیقاً پیش از آن. شرط‌هایش در پیمانه تحلیل است.
  */
-const previousPeriod = computed(() => {
-  const days = visibleDays.value
+const previousPeriod = computed(() =>
+  previousPeriodStats(gridDays.value, visibleDays.value, rangeBounds.value.end, todayNumeric)
+)
 
-  if (!days.length || rangeBounds.value.end > todayNumeric) return null
+// روزهای گذشته بازه، پایه ادعای «روزهای بی‌برنامه».
+const pastDaysCount = computed(
+  () => visibleDays.value.filter(day => day.numeric <= todayNumeric).length
+)
 
-  const firstIndex = gridDays.value.findIndex(day => day.numeric === days[0].numeric)
-
-  if (firstIndex < days.length) return null
-
-  const stats = summarizeDays(gridDays.value.slice(firstIndex - days.length, firstIndex))
-
-  return stats.total > 0 ? stats : null
-})
-
-const insights = computed(() => {
-  const list = []
-  const stats = rangeStats.value
-
-  /* روند هفتگی */
-  const weekPercents = trendWeeks.value.map(week => week.percent)
-
-  if (weekPercents.length >= MIN_TREND_WEEKS) {
-    const down = trailingRun(weekPercents, true)
-    const up = trailingRun(weekPercents, false)
-
-    if (down >= MIN_TREND_WEEKS) {
-      list.push({
-        key: 'trend-down',
-        tone: 'bad',
-        text: `در ${toPersianNumber(down)} هفته گذشته بازدهی‌ات پشت سر هم پایین آمده.`,
-      })
-    } else if (up >= MIN_TREND_WEEKS) {
-      list.push({
-        key: 'trend-up',
-        tone: 'good',
-        text: `${toPersianNumber(up)} هفته پیاپی بازدهی‌ات بالا رفته.`,
-      })
-    }
-  }
-
-  /* مقایسه با دوره قبل */
-  if (previousPeriod.value) {
-    const diff = roundPercent(stats.avg) - roundPercent(previousPeriod.value.avg)
-
-    if (Math.abs(diff) >= INSIGHT_MIN_GAP) {
-      list.push({
-        key: 'previous-period',
-        tone: diff > 0 ? 'good' : 'bad',
-        text: diff > 0
-          ? `بازدهی‌ات نسبت به دوره قبل ${toPersianNumber(diff)} درصد بهتر شده.`
-          : `بازدهی‌ات نسبت به دوره قبل ${toPersianNumber(-diff)} درصد افت کرده.`,
-      })
-    }
-  }
-
-  /* زنجیره */
-  const streak = streakStats.value
-
-  if (streak.current >= MIN_STREAK) {
-    list.push({
-      key: 'streak-alive',
-      tone: 'good',
-      text: `${toPersianNumber(streak.current)} روز پیاپی همه تسک‌هایت را تمام کرده‌ای.`,
-    })
-  } else if (streak.best.length >= MIN_STREAK) {
-    list.push({
-      key: 'streak-broken',
-      tone: 'neutral',
-      text: `بلندترین زنجیره‌ات در این بازه ${toPersianNumber(streak.best.length)} روز بوده و الان زنجیره فعالی نداری.`,
-    })
-  }
-
-  /* الگوی روزهای هفته */
-  const weekday = weekdayInsight.value
-
-  if (weekday) {
-    const best = pluralizeWeekday(weekday.best.label)
-    const worst = pluralizeWeekday(weekday.worst.label)
-
-    list.push({
-      key: 'weekday',
-      tone: 'neutral',
-      // وقتی فاصله دو سر خیلی زیاد است، جمله صریح‌تر گفته می‌شود.
-      text: weekday.worst.percent * 2 <= weekday.best.percent
-        ? `${worst} کمتر از نصف ${best} کار می‌کنی.`
-        : `${best} قوی‌ترین روز توست و ${worst} ضعیف‌ترین.`,
-    })
-  }
-
-  /* بهترین و ضعیف‌ترین ماه */
-  const months = monthlyStats.value.filter(month => month.total > 0)
-
-  if (months.length >= 2) {
-    const sorted = [...months].sort((a, b) => b.percent - a.percent)
-    const best = sorted[0]
-    const worst = sorted[sorted.length - 1]
-
-    if (best.percent - worst.percent >= INSIGHT_MIN_GAP) {
-      list.push({
-        key: 'months',
-        tone: 'neutral',
-        text: `بهترین ماهت ${best.title} بوده با ${toPersianNumber(best.percent)} درصد، و ضعیف‌ترین ${worst.title} با ${toPersianNumber(worst.percent)} درصد.`,
-      })
-    }
-  }
-
-  /* روزهای بی‌برنامه */
-  const pastDays = visibleDays.value.filter(day => day.numeric <= todayNumeric).length
-
-  if (pastDays >= MIN_DAYS_FOR_IDLE_CLAIM && stats.inactive >= pastDays * IDLE_RATIO) {
-    list.push({
-      key: 'idle-days',
-      tone: 'bad',
-      text: `در ${toPersianNumber(stats.inactive)} روز از ${toPersianNumber(pastDays)} روز این بازه هیچ تسکی برنامه‌ریزی نکرده‌ای.`,
-    })
-  }
-
-  return list.slice(0, MAX_INSIGHTS)
-})
+const insights = computed(() =>
+  buildInsights({
+    stats: rangeStats.value,
+    trendPercents: trendWeeks.value.map(week => week.percent),
+    previousStats: previousPeriod.value,
+    streak: streakStats.value,
+    weekday: weekdayInsight.value,
+    months: monthlyStats.value,
+    pastDays: pastDaysCount.value,
+  })
+)
 
 /**
  * ماه‌های موجود در نقشه، به ترتیب. ماه اول هر گروه ستون شروع برچسب را می‌دهد.
@@ -884,14 +673,17 @@ const weeklyStatsAll = computed(() => {
     const last = chunk[chunk.length - 1]
     const total = chunk.reduce((s, d) => s + d.total, 0)
     const done = chunk.reduce((s, d) => s + d.done, 0)
+    const totalWeight = chunk.reduce((s, d) => s + d.totalWeight, 0)
+    const doneWeight = chunk.reduce((s, d) => s + d.doneWeight, 0)
     const isFuture = chunk[0].numeric > todayNumeric
     weeks.push({
       title: `هفته ${Math.floor(i / 7) + 1}`,
       dateStart: chunk[0].dateStart, dateEnd: last.dateStart,
       gStart: chunk[0].gDate, gEnd: last.gDate,
       startNumeric: chunk[0].numeric, endNumeric: last.numeric,
-      total, done, percent: total ? Math.round((done / total) * 100) : 0,
-      level: getLevel(total, done, isFuture), isCurrent: chunk.some(d => d.key === todayKey.value)
+      total, done, totalWeight, doneWeight,
+      percent: totalWeight ? Math.round((doneWeight / totalWeight) * 100) : 0,
+      level: getLevel(totalWeight, doneWeight, isFuture), isCurrent: chunk.some(d => d.key === todayKey.value)
     })
   }
   return weeks
@@ -908,14 +700,17 @@ const monthlyStatsAll = computed(() => {
     const last = days[days.length - 1]
     const total = days.reduce((s, d) => s + d.total, 0)
     const done = days.reduce((s, d) => s + d.done, 0)
+    const totalWeight = days.reduce((s, d) => s + d.totalWeight, 0)
+    const doneWeight = days.reduce((s, d) => s + d.doneWeight, 0)
     const isFuture = (jy * 100 + jm) > (todayObj.jy * 100 + todayObj.jm)
     return {
       title: monthLabel(jy, jm), dateStart: days[0].dateStart, dateEnd: last.dateStart,
       gStart: days[0].gDate, gEnd: last.gDate,
       startNumeric: days[0].numeric, endNumeric: last.numeric,
-      total, done, percent: total ? Math.round((done / total) * 100) : 0,
-      level: getLevel(total, done, isFuture),
-      sparkPoints: days.map(d => (d.total && !d.isFuture) ? Math.round((d.done / d.total) * 100) : 0)
+      total, done, totalWeight, doneWeight,
+      percent: totalWeight ? Math.round((doneWeight / totalWeight) * 100) : 0,
+      level: getLevel(totalWeight, doneWeight, isFuture),
+      sparkPoints: days.map(d => (d.totalWeight && !d.isFuture) ? Math.round((d.doneWeight / d.totalWeight) * 100) : 0)
     }
   })
 })
@@ -960,7 +755,9 @@ const detailSummary = computed(() => {
   const total = details.value.tasks.length
   const done = details.value.tasks.filter(task => task.is_done).length
 
-  return { total, done, percent: total ? Math.round((done / total) * 100) : 0 }
+  // «کل» و «انجام‌شده» شمارش‌اند و «بازدهی» درصد، پس فقط سومی وزنی است. اگر
+  // این عدد از دو تای دیگر ساخته می‌شد، با درصد همان روز روی نقشه فرق می‌کرد.
+  return { total, done, percent: weightedPercent(details.value.tasks) }
 })
 
 function resolveGregorianRange(payload) {

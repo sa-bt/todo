@@ -74,6 +74,52 @@ export function gregorianToJalali(date) {
 }
 
 /**
+ * تاریخ شمسی انتخاب‌گر تاریخ را به تاریخ میلادی درخواست تبدیل می‌کند.
+ *
+ * انتخاب‌گر تاریخ پروژه مقدارش را با قالب `jYYYY/jMM/jDD` می‌دهد و سرور تاریخ
+ * میلادی می‌خواهد. این تبدیل اینجاست تا هر صفحه‌ای که انتخاب‌گر دارد نسخه
+ * خودش را ننویسد.
+ *
+ * ورودی نامعتبر تهی برمی‌گرداند، نه تاریخ اشتباه.
+ *
+ * @param {string} value مثل `1405/05/08`
+ * @returns {string|null} مثل `2026-07-30`
+ */
+export function jalaliInputToGregorian(value) {
+  if (!value) return null
+
+  const parts = String(value).split(/[/\-]/).map(part => parseInt(part, 10))
+
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null
+
+  const [jy, jm, jd] = parts
+
+  if (jm < 1 || jm > 12 || jd < 1 || jd > 31) return null
+
+  const { gy, gm, gd } = jalaali.toGregorian(jy, jm, jd)
+
+  return formatGregorianDate(new Date(gy, gm - 1, gd))
+}
+
+/**
+ * عکس تابع بالا: تاریخ میلادی به قالبی که انتخاب‌گر تاریخ می‌خواند.
+ *
+ * @param {string} value مثل `2026-07-30`
+ * @returns {string} مثل `1405/05/08`
+ */
+export function gregorianToJalaliInput(value) {
+  if (!value) return ''
+
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number)
+
+  if ([year, month, day].some(Number.isNaN)) return ''
+
+  const { jy, jm, jd } = jalaali.toJalaali(new Date(year, month - 1, day))
+
+  return `${jy}/${pad(jm)}/${pad(jd)}`
+}
+
+/**
  * تاریخ امروز به شمسی
  */
 export function getTodayShamsi(date = new Date()) {

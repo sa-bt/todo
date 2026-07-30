@@ -96,7 +96,7 @@
         <img
             src="@/assets/images/myself.png"
             class="rounded-2xl w-full h-auto"
-            alt="About"
+            :alt="isFa ? 'تصویر احمد بخشیان' : 'Portrait of Ahmad Bakhshiyan'"
         />
 
         <!-- افکت فلش سفید -->

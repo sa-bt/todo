@@ -3,6 +3,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { getTodayShamsi } from '@/utils/jalali'
 import { Check, Circle, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-vue-next' // ✅ اضافه کردن Trash2
 import { toPersianNumber } from '@/utils/number'
+import { weightedPercent } from '@/utils/taskWeight'
 
 const props = defineProps({
   weekDays: { type: Array, required: true },
@@ -31,11 +32,6 @@ function toggleTask(taskRow, day) {
   emit('toggle-task', { taskRow, day })
 }
 
-function calculatePercentage(completed, total) {
-  if (total === 0) return 0;
-  return Math.round((completed / total) * 100);
-}
-
 function getDayTaskCount(dayDate) {
   return props.tasksRows.filter(row => row && row.weekTasks?.[dayDate]).length;
 }
@@ -44,10 +40,16 @@ function getDayCompletedCount(dayDate) {
   return props.tasksRows.filter(row => row && row.weekTasks?.[dayDate]?.is_done).length;
 }
 
+/*
+ * درصد ستون هر روز. ردیف‌های این جدول اهداف مختلف‌اند، پس اولویت‌ها با هم فرق
+ * دارند و درصد باید وزنی باشد. شمارنده‌های بالای همین ستون شمارش می‌مانند.
+ */
 function getDayProgress(dayDate) {
-  const completed = getDayCompletedCount(dayDate);
-  const total = getDayTaskCount(dayDate);
-  return calculatePercentage(completed, total);
+  return weightedPercent(
+    props.tasksRows
+      .map(row => row?.weekTasks?.[dayDate])
+      .filter(Boolean)
+  );
 }
 
 function getRowsForDay(dayDate) {

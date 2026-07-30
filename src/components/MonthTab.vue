@@ -7,6 +7,7 @@ import {
   getPreviousMonth,
   getNextMonth,
 } from '@/utils/jalali'
+import { weightedPercent } from '@/utils/taskWeight'
 import {
   ChevronLeft,
   ChevronRight,
@@ -55,10 +56,8 @@ const remainingCount = computed(() =>
   monthTasks.value.length - completedCount.value
 )
 
-const completedPercent = computed(() => {
-  if (!monthTasks.value.length) return 0
-  return Math.round((completedCount.value / monthTasks.value.length) * 100)
-})
+// شمارش‌های بالا شمارش می‌مانند، درصد از اولویت هدف‌ها اثر می‌گیرد.
+const completedPercent = computed(() => weightedPercent(monthTasks.value))
 
 async function loadData() {
   isRefreshing.value = true

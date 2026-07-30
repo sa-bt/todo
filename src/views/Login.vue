@@ -117,6 +117,15 @@
         <span v-else>در حال ورود…</span>
       </button>
 
+      <!-- نصب اپ؛ روی /admin/login نصب پنل و در غیر آن نصب اپ کاربر انجام می‌شود -->
+      <InstallAppButton
+          class="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl border border-[var(--color-border)]
+               text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-background-mute)]
+               transition disabled:opacity-60"
+          :label="isAdminLogin ? 'نصب پنل مدیریت' : 'نصب برنامه روی دستگاه'"
+          :app-name="isAdminLogin ? 'Do IT Admin' : 'Do IT'"
+      />
+
       <!-- لینک ثبت‌نام -->
       <div v-if="!isAdminLogin" class="text-center mt-6">
         <span class="text-[var(--color-text-secondary)] text-sm">حساب کاربری نداری؟</span>
@@ -132,6 +141,7 @@
 import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
+import InstallAppButton from '@/components/UI/InstallAppButton.vue'
 import { registerWebPush } from '@/utils/webpush'
 
 const router = useRouter()
@@ -289,7 +299,8 @@ async function onSubmit () {
     auth.setAuth({ user: data.data.user, token: data.data.token })
 
     if (isAdminLogin.value && !auth.isAdmin) {
-      auth.logout()
+      // توکن همین الان صادر شده و معتبر است، پس باید روی سرور هم باطل شود.
+      await auth.signOut()
       applyErrors({ messages: ['این مسیر فقط برای حساب مدیر قابل استفاده است.'] })
       await fetchCaptcha()
       await nextTick()
@@ -365,6 +376,8 @@ async function parseErrorResponse(res) {
     messages.unshift('کپچا منقضی شده، لطفاً دوباره تلاش کنید.')
   }
   if (status === 401 && !messages.length) messages.push('اطلاعات ورود نادرست است.')
+  // ۴۰۳ یعنی گذرواژه درست بود ولی حساب هنوز اجازهٔ ورود ندارد.
+  if (status === 403 && !messages.length) messages.push('این حساب هنوز اجازهٔ ورود ندارد.')
   if (status === 429 && !messages.length) messages.push('دفعات تلاش بیش از حد مجاز است. بعداً دوباره تلاش کنید.')
 
   messages = dedupStrings(messages)

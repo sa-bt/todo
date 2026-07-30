@@ -7,6 +7,7 @@ import TaskItem from '@/components/Days/TaskItem.vue'
 import AddTaskModal from '@/components/Days/AddTaskModal.vue'
 import DeleteConfirmModal from './DeleteConfirmModal.vue'
 import { getTodayShamsi, getTodayGregorian } from '@/utils/jalali'
+import { weightedPercent } from '@/utils/taskWeight'
 
 const tasksStore = useTasksStore()
 const goalsStore = useGoalsStore()
@@ -38,10 +39,9 @@ const remainingCount = computed(() =>
   todayTasks.value.length - completedCount.value
 )
 
-const completedPercent = computed(() => {
-  if (!todayTasks.value.length) return 0
-  return Math.round((completedCount.value / todayTasks.value.length) * 100)
-})
+// دو کارت بالای صفحه شمارش نشان می‌دهند و نوار پیشرفتشان درصد. شمارش‌ها بالا
+// دست‌نخورده‌اند و فقط این درصد از اولویت هدف‌ها اثر می‌گیرد.
+const completedPercent = computed(() => weightedPercent(todayTasks.value))
 
 function openModal() {
   if (isTaskTogglePending.value) return

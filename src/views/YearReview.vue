@@ -95,7 +95,9 @@ const months = computed(() =>
   (review.value?.months || []).map(month => ({
     ...month,
     name: SHAMSI_MONTH_NAMES[month.month - 1],
-    level: getLevel(month.total, month.done),
+    // سطح رنگ از وزن‌ها می‌آید، چون درصدی که کنارش نوشته می‌شود هم وزنی است.
+    // اگر از شمارش ساخته شود، رنگ خانه با عدد داخلش جور درنمی‌آید.
+    level: getLevel(month.total_weight, month.done_weight),
   }))
 )
 

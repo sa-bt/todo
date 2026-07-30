@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { getTodayShamsi } from '@/utils/jalali'
 import BaseTooltip from '@/components/UI/BaseTooltip.vue'
+import InstallAppButton from '@/components/UI/InstallAppButton.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useSystemNotificationsStore } from '@/stores/systemNotifications'
 
@@ -176,8 +177,8 @@ function goToNotifications() {
   router.push({ name: 'notifications' })
 }
 
-function logout() {
-  auth.logout()
+async function logout() {
+  await auth.signOut()
   router.push({ name: 'login' })
 }
 
@@ -266,6 +267,11 @@ onBeforeUnmount(() => {
 
     <div class="flex items-center gap-3">
       <ThemeSwitcher class="hidden lg:flex ml-3" />
+
+      <InstallAppButton
+        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-token surface-soft hover-surface-mute focus:ring-2 focus:ring-[var(--color-primary)]/30 transition text-sm font-medium text-[var(--color-heading)] focus:outline-none disabled:opacity-60"
+        label="نصب برنامه"
+      />
 
       <BaseTooltip text="مشاهده روزانه" placement="bottom">
         <button
@@ -573,6 +579,11 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="pt-4 pb-2 border-t border-token bg-[var(--color-background)] sticky bottom-0">
+        <InstallAppButton
+          class="w-full flex items-center justify-center gap-2 px-4 py-2 mb-2 rounded-lg text-sm font-semibold transition bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none disabled:opacity-60"
+          label="نصب برنامه روی دستگاه"
+        />
+
         <div class="flex gap-2 w-full p-2 bg-[var(--color-background-soft)] rounded-lg">
           <button
             @click="goToNotifications"

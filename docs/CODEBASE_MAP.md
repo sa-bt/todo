@@ -1,6 +1,6 @@
 # نقشه فنی Repository
 
-> Last reviewed: 2026-07-02
+> Last reviewed: 2026-07-30
 > Repository root: `/home/develop/Projects/toDo/front`
 > Application root: `/home/develop/Projects/toDo/front`
 > Purpose: Repository architecture and navigation reference  
@@ -16,7 +16,19 @@
 
 نام package برابر `npmtodo` است. برچسب‌های محصول در فایل‌های مختلف `Do It`، `Todo` و `TodoGoals` هستند؛ یک نام محصول canonical از Repository قابل اثبات نیست.
 
-Backend، Database، Migration، Queue worker و منطق server-side در این Repository وجود ندارند. همه endpointها قراردادهای مصرف‌شده توسط frontend هستند، نه اثبات implementation سمت سرور.
+Backend، Database، Migration، Queue worker و منطق server-side در این Repository وجود ندارند، ولی برخلاف نسخه قبلی این سند، در دسترس‌اند. مخزن مستقل سمت سرور اینجاست:
+
+```text
+/home/develop/Projects/toDo/backend
+```
+
+پس endpointهای این سند هنوز «قرارداد مصرف‌شده توسط frontend» هستند، ولی حالا قابل راستی‌آزمایی‌اند. برای هر endpoint، فایل مسیرهای سرور مرجع است:
+
+```text
+backend/routes/api.php
+```
+
+Stack سمت سرور: Laravel با Sanctum برای token، صف و زمان‌بند برای اعلان‌ها، و MySQL. نقشه فنی جداگانه‌ای برای آن مخزن هنوز نوشته نشده است.
 
 ## 2. Repository Root
 
@@ -56,6 +68,8 @@ Versionهای resolved از `package-lock.json` استخراج شده‌اند. 
 | Prettier | `3.6.2` | `3.6.2` |
 | Day.js | `^1.11.15` | `1.11.18` |
 | Jalaliday | `^3.1.0` | `3.1.1` |
+| `jalaali-js` | `^1.2.8` | `1.2.8` |
+| Vitest | `^4.1.10` | `4.1.10` |
 | `vue3-persian-datetime-picker` | `^1.2.2` | `1.2.2` |
 | `vue3-toastify` | `^0.2.8` | `0.2.8` |
 | `lucide-vue-next` | `^0.542.0` | `0.542.0` |
@@ -116,7 +130,8 @@ npmTodo/
 | `src/stores/` | Pinia state، API orchestration و client-side normalization |
 | `src/plugins/` | Axios instanceها و helperهای admin API |
 | `src/router/` | Route table و navigation guards |
-| `src/utils/` | Jalali/Gregorian date، number، week و Web Push helpers |
+| `src/utils/` | Jalali/Gregorian date، number، week، تحلیل گزارش و Web Push helpers |
+| `tests/unit/` | آزمون واحد پیمانه‌های خالص |
 | `src/locales/` | پیام‌های `fa` و `en` برای Vue I18n |
 | `src/assets/` | CSS، font و imageهای importشده |
 | `public/` | فایل‌هایی که با path ثابت سرو می‌شوند؛ `sw.js` source ویژه PWA است |
@@ -126,11 +141,12 @@ npmTodo/
 - Authentication: `src/views/Login.vue`، `src/views/Register.vue`، `src/stores/auth.js`
 - Goals: `src/components/GoalsTab.vue`، `src/components/Goals/*`، `src/stores/goals.js`
 - Tasks: `src/components/DayTab.vue`، `WeekTab.vue`، `MonthTab.vue`، `Days/*`، `Month/*`، `src/stores/tasks.js`
-- Reports: `src/components/YearTab.vue`
+- Reports: `src/components/YearTab.vue`، `src/views/YearReview.vue`، `src/components/Activity/PaletteEditor.vue`، `src/stores/activityPalette.js`، `src/utils/activityLevel.js`، `src/utils/activityInsights.js`
 - User settings: `src/components/SettingTab.vue` و `src/stores/userSetting.js`
 - Notifications: `src/views/Notifications.vue`، `src/components/Layout/Header.vue`، `src/stores/systemNotifications.js`
 - Toast: `src/stores/notification.js` و `src/components/UI/ToastNotification.vue`
 - Admin course UI: `src/views/admin/*` و `src/plugins/api.js`
+- آمار بازدید: `src/utils/analytics.js` (ثبت از مرورگر)، `src/stores/adminAnalytics.js`، `src/views/admin/Reports.vue` و `src/components/Admin/*` (نمودارهای `svg` درون‌خطی، بدون کتابخانه بیرونی)
 - Landing/contact: `src/views/landing/index.vue` و `src/components/Landing/*`
 
 ## 9. Entry Pointها
@@ -204,8 +220,18 @@ Repository pattern محلی وجود ندارد. Persistence دو بخش دار�
 - `token`
 - `lang`
 - `landing-theme`
+- `toast-sound`
+- `activity-palette:{userId}`؛ برای کاربر واردنشده `activity-palette:guest`
+- `visitor-id`؛ شناسه تصادفی بازدیدکننده برای شمارش بازدید یکتا
+- `analytics-opt-out`؛ مقدار `1` هر ثبت بازدیدی را خاموش می‌کند
 
-تغییر شکل `user` یا نام این کلیدها می‌تواند session، role detection، locale و theme کاربران موجود را بشکند.
+یک کلید در `sessionStorage` هم هست: `visit-session`. مقدارش شناسه نشست و مهر زمانی آخرین بازدید است که با `|` جدا شده‌اند. بعد از سی دقیقه بی‌کاری، نشست تازه می‌شود.
+
+شناسه بازدیدکننده یک عدد تصادفی است و از هیچ چیزی درباره کاربر ساخته نشده. نشانی شبکه نه در مرورگر و نه روی سرور ذخیره می‌شود؛ جدول `page_views` اصلاً ستونی برایش ندارد.
+
+کلید پالت به ازای هر کاربر جدا است، پس دو حساب روی یک مرورگر رنگ‌بندی هم را نمی‌بینند. در عوض این تنظیم روی دستگاه دیگر همان کاربر همراهش نمی‌آید. داده خوانده‌شده از این کلید از اعتبارسنجی می‌گذرد و داده خراب به پیش‌فرض برمی‌گردد.
+
+تغییر شکل `user` یا نام این کلیدها می‌تواند session، role detection، locale، theme و رنگ‌بندی گزارش کاربران موجود را بشکند.
 
 ## 14. Model و Entity Conventions
 
@@ -252,6 +278,7 @@ Server-side validation منبع نهایی است و در این Repository قا
 | `/app/month` | `month` | inherited `requiresAuth` |
 | `/app/goals` | `goals` | inherited `requiresAuth` |
 | `/app/year` | `year` | inherited `requiresAuth` |
+| `/app/year-review` | `yearReview` | inherited `requiresAuth` |
 | `/app/settings` | `settings` | inherited `requiresAuth` |
 | `/app/notifications` | `notifications` | inherited `requiresAuth` |
 | `/admin` | `admin` | `requiresAuth`, `requiresAdmin` |
@@ -268,10 +295,17 @@ Route nameها در Header، notification navigation و redirectها public inte
 - Goals: `/goals`, `/goals/:id`, `/goals/parentable`, `/goal-tasks`
 - Tasks: `/tasks`, `/tasks/:id`
 - Settings: `/user-setting`
-- Reports: `/activities/:year`
+- Reports: `/reports/activity`, `/reports/backlog`, `/reports/goal-ranking`, `/reports/goal-activity`, `/reports/year-review`
+- ثبت بازدید: `/api/track/view` (عمومی و بدون احراز هویت، با محدودیت نرخ)
 - Notifications: `/notifications`, `/notifications/unread-count`, `/notifications/:id/read`, `/notifications/read-all`
 - Push: `/save-subscription`
 - Admin: `/api/admin/stats`, `/admin/courses/list`, `/admin/course/:slug`, `/api/admin/contents`
+- Admin analytics: `/admin/analytics/daily`, `/admin/analytics/weekly`, `/admin/analytics/overview`
+
+دو نکته درباره همین فهرست:
+
+- مسیر `/activities/:year` دیگر مصرف‌کننده‌ای در سمت کاربر ندارد. صفحه گزارش کاملاً به `/reports/activity` منتقل شده که بازه میلادی می‌گیرد نه سال. خود مسیر در سرور پابرجا است و تصمیم درباره حذفش با مالک محصول است.
+- مسیر `/api/admin/stats` در سمت سرور وجود ندارد. هیچ مسیری با این نشانی در فایل مسیرهای سرور ثبت نشده، پس صفحه خلاصه admin نمی‌تواند عدد واقعی بگیرد.
 
 اغلب Axios responseها `data.data` را انتظار دارند. Notifications pagination انتظار nested shape با list و `meta.next_page_url` دارد.
 
@@ -290,7 +324,7 @@ Route nameها در Header، notification navigation و redirectها public inte
 ## 19. Frontend Architecture
 
 - Vue Composition API در بیشتر componentها؛ Pinia هم setup-store و هم options-store دارد.
-- Route-level lazy loading فقط برای `NotFound.vue` استفاده شده؛ بقیه viewها eager import هستند.
+- Route-level lazy loading برای همه مسیرها فعال است. تا ۸ مرداد ۱۴۰۵ فقط `NotFound.vue` و `YearReview.vue` تنبل بودند و بقیه eager import می‌شدند؛ حالا هر view و هر tab با `() => import(...)` وارد می‌شود. صفحه ورود در دو مسیر مصرف می‌شود ولی چون هر دو به یک تابع اشاره می‌کنند، یک chunk مشترک می‌گیرد.
 - Styling با Tailwind utilityها، CSS variableهای theme و فایل‌های `base.css`/`main.css`.
 - RTL و زبان فارسی غالب است؛ Landing از Vue I18n برای `fa` و `en` استفاده می‌کند.
 - Shared controls از `v-model` contract یعنی `modelValue` و `update:modelValue` استفاده می‌کنند.
@@ -317,18 +351,71 @@ Vite pluginها:
 
 `public/sw.js` در build به `dist/sw.js` تبدیل می‌شود و `self.__WB_MANIFEST` در injection point جای‌گذاری می‌شود. `self.BUILD_HASH` با `Date.now()` در هر config evaluation تولید می‌شود.
 
-Build در این مرحله اجرا نشد؛ Node executable در محیط در دسترس نبود و درخواست نیز اجرای Build را منع کرده بود.
+Node در مسیر پیش‌فرض نیست و برای اجرای build باید به مسیر اضافه شود:
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.18.0/bin:$PATH"
+```
+
+نتیجه build در ۸ مرداد ۱۴۰۵ بدون خطا بود. با فعال شدن lazy loading مسیرها، خروجی از یک bundle بزرگ به chunkهای مسیر‌محور تبدیل شد:
+
+| فایل ورودی صفحه | قبل | بعد |
+|---|---:|---:|
+| `main` JavaScript | ۱۷۴۱ کیلوبایت | ۲۹۵ کیلوبایت |
+| همان، فشرده | ۴۴۴ کیلوبایت | ۱۱۱ کیلوبایت |
+| `main` CSS | ۱۷۴ کیلوبایت | ۱۲۰ کیلوبایت |
+
+فقط همین دو فایل در `index.html` و `admin.html` بارگذاری می‌شوند؛ بقیه chunkها هنگام رفتن به مسیرشان گرفته می‌شوند.
+
+دو نکته باقی‌مانده در خروجی build:
+
+- یک chunk مشترک حدود ۸۲۳ کیلوبایتی بین نماهای روز، هفته و ماه وجود دارد و هشدار حجم Rollup هنوز نشان داده می‌شود. این chunk فقط با ورود به بخش برنامه گرفته می‌شود، ولی برای کاربر واردشده همچنان سنگین است. کوچک کردنش کار جداگانه‌ای است و به chunking دستی یا بازبینی importهای کتابخانه آیکون نیاز دارد.
+- انتخاب‌گر تاریخ شمسی یک chunk حدود ۳۰۰ کیلوبایتی جدا دارد.
+
+build یک هشدار CSS هم می‌دهد که از قبل در مخزن بوده: یک گزینشگر شکسته در `src/components/Goals/List.vue`.
 
 ## 21. Test Process
 
-هیچ test file، test directory، test dependency یا test script شناسایی نشد. بنابراین:
+این Repository از ۸ مرداد ۱۴۰۵ آزمون واحد دارد. تا پیش از آن هیچ آزمونی نداشت و منطق گزارش‌ها هر بار با اسکریپت موقت سنجیده و بعد دور ریخته می‌شد.
 
-- Unit test process وجود ندارد.
-- Component test process وجود ندارد.
-- E2E test process وجود ندارد.
+اجرا:
+
+```bash
+npm run test        # یک بار
+npm run test:watch  # حالت زنده
+```
+
+تنظیم آزمون جدا از تنظیم ساخت است، چون پلاگین‌های Vue و Tailwind و PWA برای منطق خالص لازم نیستند:
+
+```text
+vitest.config.js
+```
+
+دو تصمیم در همان فایل ثبت شده‌اند: الگوی فایل آزمون `tests/unit/**/*.test.js` است، و منطقه زمانی آزمون‌ها روی تهران بسته می‌شود تا نتیجه آزمون تاریخ روی ماشین‌های مختلف یکی بماند.
+
+پوشش فعلی، چهار پیمانه خالص با ۱۲۵ آزمون:
+
+```text
+src/utils/activityLevel.js      سطح بازدهی، رنگ متن و اعتبارسنجی پالت
+src/utils/jalali.js             تبدیل تاریخ، هفته شمسی، جدول ماه و مرز انتخاب‌گر تاریخ
+src/utils/activityInsights.js   جمع‌بندی، الگوی روزهای هفته، زنجیره و بینش
+src/utils/analytics.js          شناسه بازدیدکننده و نشست، خاموشی و شکل بار درخواست
+```
+
+آنچه هنوز آزمون ندارد:
+
+- component test و E2E وجود ندارند. آزمون‌ها فقط منطق خالص را می‌گیرند، نه رندر و نه مسیریابی.
 - Coverage configuration وجود ندارد.
+- منطق اتحاد نقشه و بازه هنوز داخل `src/components/YearTab.vue` است و بیرون کشیده نشده.
+- `src/utils/week.js` عمداً آزمون نگرفت، چون هیچ مصرف‌کننده‌ای ندارد. تابع `getWeekRange()` آن با `toISOString()` تاریخ را به وقت جهانی می‌برد و در ساعت‌های ابتدایی بامداد یک روز عقب می‌افتد. تصمیم درباره حذف یا اصلاحش با مالک محصول است.
 
-Verification فعلی باید با static inspection و در تغییرات آینده با build/browser/API environment انجام شود.
+مخزن سمت سرور برخلاف این مخزن آزمون دارد. اجرای آن روی این ماشین به تصویر محلی نیاز دارد، چون نسخه `php` سیستم قدیمی‌تر از نیاز پروژه است:
+
+```bash
+docker run --rm -v "$PWD":/app -w /app -u "$(id -u):$(id -g)" todo_php:latest php artisan test
+```
+
+نتیجه در ۸ مرداد ۱۴۰۵: ۶۸ آزمون موفق و ۲۷۱ سنجه، بدون ناموفق. چهار آزمون آخر مربوط به کار انجام‌نشده وزن تسک در پوشه کار است، نه به نسخه ثبت‌شده.
 
 ## 22. Lint و Format Process
 
@@ -359,6 +446,7 @@ Header هنگام mount، bridge را attach و unread count را refresh می�
 - `src/stores/notification.js`: global toast contract
 - `src/components/UI/`: shared component props/emits
 - `src/utils/jalali.js`: contract تاریخ بین UI و API
+- `src/utils/activityLevel.js` و `src/utils/activityInsights.js`: منطق مشترک گزارش، بدون وابستگی به Vue
 - PWA/Web Push files: cross-cutting و پرریسک
 - CSS variables و classهای theme در assets: visual contract مشترک
 
@@ -372,7 +460,7 @@ Header هنگام mount، bridge را attach و unread count را refresh می�
 - Fetch base key مصرف‌شده: `VITE_API_BASE`
 - Environment key Web Push: `VITE_PUSH_PUBLIC_KEY`
 - `Authorization: Bearer` header
-- Store idها: `auth`, `goals`, `tasks`, `notification`, `systemNotifications`, `userSetting`, `theme`
+- Store idها: `auth`, `goals`, `tasks`, `notification`, `systemNotifications`, `userSetting`, `theme`, `activityPalette`, `toastSound`
 - Props/emits componentها، به‌خصوص shared UI و feature Modalها
 - `swUpdateAvailable`, `__kind: 'webpush'`, `self.__WB_MANIFEST`, `self.BUILD_HASH`
 - `#app` mount id و `notifications-menu` aria/DOM id
@@ -389,6 +477,8 @@ Header هنگام mount، bridge را attach و unread count را refresh می�
 
 - Commentهای فارسی و علامت‌دار فراوان داخل source
 - `src/stores/counter.js` شبیه template residue و بدون مصرف شناسایی‌شده
+- `src/components/Goals/Item.vue` نسخه قدیمی فهرست اهداف است و هیچ‌جا وارد نمی‌شود؛ فهرست واقعی `src/components/Goals/List.vue` است.
+- `src/views/settings/NotificationSettings.vue` هیچ مسیر و هیچ import ندارد. تنظیمات واقعی اعلان در `src/components/SettingTab.vue` است.
 - README عمدتاً متن template Vue/Vite است.
 
 ### Parallel pattern
@@ -500,6 +590,7 @@ settings/save or app startup
 - Shared task state بین Day/Week/Month
 - Notification pagination URL؛ ممکن است absolute یا relative باشد.
 - PWA cache، Service Worker lifecycle و update event
+- بارگذاری تنبل مسیرها همراه با استقرار تازه: صفحه‌ای که مدت‌ها باز مانده، نام chunk نسخه قبلی را در حافظه دارد. اگر آن فایل روی سرور نباشد، رفتن به یک مسیر تازه با خطای بارگذاری شکست می‌خورد. نگه داشتن فایل‌های نسخه قبلی روی سرور یا مدیریت خطای مسیریابی، هر دو راه‌حل ممکن‌اند و هیچ‌کدام امروز صریح پیاده نشده‌اند.
 - Push payload و unread counter consistency
 - Shared UI props/emits و Teleport/focus behavior
 - API-provided notification URL navigation
@@ -510,19 +601,22 @@ settings/save or app startup
 - Source commentها و loggingهای debug-like زیاد و ناهمگون‌اند.
 - `counter.js` ظاهراً template residue است و import آن یافت نشد.
 - README با پروژه فعلی همگام نیست.
-- Admin reports دارای اعداد hard-coded و placeholder است.
-- Admin summary inline template placeholder است.
-- `UpdateUiVersion.vue` وجود دارد، ولی import/render آن در source یافت نشد.
+- Admin summary inline template placeholder است و مسیر آماری‌اش در سرور وجود ندارد.
 
-این موارد در setup task اصلاح نشده‌اند.
+دو مورد از این فهرست بیرون رفتند:
+
+- `UpdateUiVersion.vue` امروز در `src/App.vue` هم import و هم render می‌شود. جمله قبلی این سند دیگر درست نبود.
+- صفحه گزارش مدیر دیگر عدد ساختگی ندارد. کاملاً بازنویسی شد و داده‌اش از مسیرهای `admin/analytics/*` می‌آید. کارت «فروش ماهانه» هم که هیچ معادلی در محصول نداشت حذف شد.
+
+بقیه موارد اصلاح نشده‌اند.
 
 ## 30. Parallel Patterns
 
 1. دو Axios client با interceptor متفاوت
 2. Axios و native Fetch با base keyهای متفاوت
-3. دو notification settings UI
+3. دو فایل تنظیمات اعلان که یکی‌شان مصرف‌کننده ندارد
 4. چند date utility با behavior متفاوت (`toISOString` در `week.js` در برابر local date در `jalali.js`)
-5. دو PWA manifest source
+5. دو manifest استاتیک برای کاربر و مدیر، با انتخاب زمان اجرا در `src/utils/pwaManifest.js`. این یکی عمدی است نه ناهمگونی.
 6. Goal taskهای recurring (`/goal-tasks`) در برابر task CRUD معمول (`/tasks`)
 
 قبل از consolidate کردن هر مورد، consumerها و backend contract باید بررسی شوند.
@@ -536,8 +630,14 @@ settings/save or app startup
 5. `fetchGoals` هر داده موجود را بدون توجه به query قبلی cache می‌کند؛ فراخوانی `without_children` و فراخوانی full list می‌توانند یکدیگر را اشتباه skip کنند.
 6. `SettingTab.vue`، `setNotification` را در دو محل با آرگومان‌های positional فراخوانی می‌کند، در حالی که action یک object destructuring می‌خواهد؛ در این فراخوانی `message` مقدار مورد انتظار را نمی‌گیرد و Toast صحیح ساخته نمی‌شود.
 7. `WeekTab.vue` در شاخه ساخت task، خروجی کامل `tasksStore.addTask()` را به‌عنوان task ذخیره می‌کند، در حالی که action `res.data` را برمی‌گرداند نه لزوماً task object.
-8. `public/manifest.webmanifest` و manifest داخل `vite.config.js` در `name`, `short_name`, `description`, icon metadata و RTL metadata یکسان نیستند.
+8. رفع شد. `vite.config.js` امروز `manifest: false` دارد و با توضیح صریح، فایل‌های استاتیک زیر `public/` را تنها منبع حقیقت manifest اعلام کرده است. پس دو منبع ناسازگار manifest دیگر وجود ندارد.
 9. README می‌گوید TypeScript type-check انجام می‌شود، ولی script/dependency مربوط در package configuration وجود ندارد.
+10. `getAdminStats()` مسیر `/api/admin/stats` را صدا می‌زند، ولی چنین مسیری در `backend/routes/api.php` ثبت نشده است. این مورد تازه با در دسترس بودن مخزن سمت سرور قابل اثبات شد.
+11. صفحه گزارش دیگر `/activities/:year` را مصرف نمی‌کند، ولی آن مسیر در سرور باقی مانده است.
+
+همه موارد این فهرست در ۸ مرداد ۱۴۰۵ دوباره روی کد سنجیده شدند. مورد هشت رفع شده بود و وضعیتش عوض شد؛ بقیه سر جای خود هستند.
+
+یک ناسازگاری تازه در همان روز پیدا و رفع شد: `src/utils/jalali.js` بسته `jalaali-js` را مستقیم وارد می‌کرد، ولی آن بسته در فهرست وابستگی‌ها نبود و فقط از راه انتخاب‌گر تاریخ شمسی و دو سطح وابستگی میانی به `node_modules` می‌رسید. یعنی با هر تغییر در آن زنجیره، کل لایه تاریخ برنامه می‌شکست. حالا با همان نسخه‌ای که تا امروز اجرا می‌شده، صریح اعلام شده است.
 
 ## 32. Items Requiring Runtime Verification
 
@@ -556,6 +656,7 @@ settings/save or app startup
 - Course content block rendering برای داده واقعی
 - accessibility و focus trapping Modalها
 - browser support برای `color-mix`, PWA و Web Push
+- رفتار واقعی مرورگر پس از تنبل شدن مسیرها: تأخیر اولین ورود به هر tab، و کار کردن مسیرها پس از یک استقرار تازه روی صفحه‌ای که از قبل باز بوده
 
 ## 33. Business Rules Requiring Owner Confirmation
 

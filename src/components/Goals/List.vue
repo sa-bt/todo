@@ -82,6 +82,19 @@ const priorityColorClasses = {
   low: 'text-[var(--color-heading)]/70',
 }
 
+/*
+ * هدف والد. اولویتش هیچ‌وقت به وزن تبدیل نمی‌شود، چون تسک نمی‌گیرد.
+ */
+function hasChildren(goal) {
+  return (goal?.children_count ?? 0) > 0
+}
+
+/*
+ * درصد کارت هدف عمداً وزنی نیست.
+ *
+ * همه تسک‌های یک هدف اولویت یکسان دارند، پس وزن هر دو طرف کسر را در یک عدد
+ * ضرب می‌کند و نسبت تکان نمی‌خورد.
+ */
 function calculateProgress(stats) {
   if (!stats || stats.total === 0 || stats.total == null) return 0
   return Math.round((stats.done / stats.total) * 100)
@@ -297,7 +310,11 @@ async function proceedDelete() {
         :key="goal.id"
         class="goal-card p-7 rounded-3xl border border-token shadow-sm flex flex-col justify-between card-bg transition-all duration-200 hover:shadow-md"
       >
-        <span v-if="goal.priority" class="ribbon">{{ priorityLabels[goal.priority] }}</span>
+        <!--
+          اولویت فقط از راه تسک به وزن تبدیل می‌شود و هدف والد تسک نمی‌گیرد،
+          پس روی کارت والد نه نوار اولویت می‌آید و نه نشان آن.
+        -->
+        <span v-if="goal.priority && !hasChildren(goal)" class="ribbon">{{ priorityLabels[goal.priority] }}</span>
 
         <div class="space-y-4 text-right">
           <div class="flex flex-col gap-2">
@@ -345,7 +362,7 @@ async function proceedDelete() {
                 </text>
               </svg>
 
-              <span :class="priorityColorClasses[goal.priority]">
+              <span v-if="!hasChildren(goal)" :class="priorityColorClasses[goal.priority]">
                 <component :is="priorityIcons[goal.priority]" class="w-5 h-5" />
               </span>
             </div>

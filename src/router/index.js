@@ -1,135 +1,173 @@
-import { createRouter, createWebHistory } from "vue-router"
-import { useAuthStore } from "@/stores/auth"
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { applySeo } from '@/utils/seo'
+
+/*
+ * همه صفحه‌ها تنبل بارگذاری می‌شوند: هر مسیر فقط وقتی از شبکه گرفته می‌شود که
+ * کاربر واقعاً به آن برود. قبلاً همه‌شان به‌صورت مستقیم وارد می‌شدند، پس کسی
+ * که فقط صفحه معرفی را می‌دید، کل بخش مدیر و کارت سال را هم بارگیری می‌کرد.
+ *
+ * نکته: صفحه ورود در دو مسیر مصرف می‌شود، ولی چون هر دو به یک تابع اشاره
+ * می‌کنند، یک بسته مشترک می‌گیرند نه دو بسته.
+ */
 
 // --- 1. کامپوننت‌های Views ---
-import Login from "@/views/Login.vue"
-import Dashboard from "@/views/Dashboard.vue"
-import Register from "@/views/Register.vue"
-import Landing from "@/views/landing/index.vue"
+const Login = () => import('@/views/Login.vue')
+const Dashboard = () => import('@/views/Dashboard.vue')
+const Register = () => import('@/views/Register.vue')
+const Landing = () => import('@/views/landing/index.vue')
 
 // 🌟 وارد کردن کامپوننت جدید برای دوره ها
-import AdminDashboardLayout from "@/views/admin/Dashboard.vue"
-import AdminHome from "@/views/admin/Home.vue"
-import AdminReports from "@/views/admin/Reports.vue"
-import AdminContents from "@/views/admin/Contents.vue"
-import CourseList from "@/views/admin/CourseList.vue"
-import CourseDetail from "@/views/admin/Course.vue"
+const AdminDashboardLayout = () => import('@/views/admin/Dashboard.vue')
+const AdminHome = () => import('@/views/admin/Home.vue')
+const AdminReports = () => import('@/views/admin/Reports.vue')
+const AdminContents = () => import('@/views/admin/Contents.vue')
+const AdminUsers = () => import('@/views/admin/Users.vue')
+const AdminContacts = () => import('@/views/admin/Contacts.vue')
+const AdminNotifications = () => import('@/views/admin/AdminNotifications.vue')
+const CourseList = () => import('@/views/admin/CourseList.vue')
+const CourseDetail = () => import('@/views/admin/Course.vue')
 
-const NotFound = () => import("@/views/NotFound.vue")
+const NotFound = () => import('@/views/NotFound.vue')
 
 // --- 2. کامپوننت‌های Tabهای Dashboard ---
-import GoalsTab from "@/components/GoalsTab.vue"
-import YearTab from "@/components/YearTab.vue"
-import WeekTab from "@/components/WeekTab.vue"
-import DayTab from "@/components/DayTab.vue"
-import MonthTab from "@/components/MonthTab.vue"
-import SettingTab from "@/components/SettingTab.vue"
-import Notifications from "../views/Notifications.vue";
+const GoalsTab = () => import('@/components/GoalsTab.vue')
+const YearTab = () => import('@/components/YearTab.vue')
+const WeekTab = () => import('@/components/WeekTab.vue')
+const DayTab = () => import('@/components/DayTab.vue')
+const MonthTab = () => import('@/components/MonthTab.vue')
+const SettingTab = () => import('@/components/SettingTab.vue')
+const Notifications = () => import('@/views/Notifications.vue')
 
 // کارت سال، صفحه جداگانه‌ای است نه یکی از تب‌های گزارش.
-const YearReview = () => import("@/views/YearReview.vue")
+const YearReview = () => import('@/views/YearReview.vue')
 
 const routes = [
+  {
+    path: '/',
+    redirect: () => ({
+      name: 'landing',
+      params: { locale: localStorage.getItem('lang') === 'en' ? 'en' : 'fa' },
+    }),
+  },
+
   // مسیرهای احراز هویت (Login & Register)
   {
-    path: "/vorod",
-    name: "login",
+    path: '/vorod',
+    name: 'login',
     component: Login,
     meta: { guest: true },
   },
 
   {
-    path: "/sabtenam",
-    name: "register",
+    path: '/sabtenam',
+    name: 'register',
     component: Register,
     meta: { guest: true },
   },
 
   {
-    path: "/",
-    name: "landing",
+    path: '/:locale(fa|en)',
+    name: 'landing',
     component: Landing,
-    meta: { guest: true, title: "احمد بخشیان | توسعه‌دهنده Laravel و Vue" },
+    props: true,
+    meta: { guest: true },
   },
 
   {
-    path: "/admin/entry",
-    name: "adminEntry",
-    redirect: to => ({ name: "adminLogin", query: to.query }),
+    path: '/admin/entry',
+    name: 'adminEntry',
+    redirect: (to) => ({ name: 'adminLogin', query: to.query }),
   },
 
   {
-    path: "/admin/login",
-    name: "adminLogin",
+    path: '/admin/login',
+    name: 'adminLogin',
     component: Login,
     meta: { guest: true, adminApp: true },
   },
 
   // مسیرهای جدید ادمین
   {
-    path: "/admin",
-    name: "admin",
+    path: '/admin',
+    name: 'admin',
     component: AdminDashboardLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
-        path: "",
-        name: "adminSummary",
+        path: '',
+        name: 'adminSummary',
         component: AdminHome,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
-        path: "reports",
-        name: "adminReports",
+        path: 'reports',
+        name: 'adminReports',
         component: AdminReports,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
-        path: "contents",
-        name: "adminContents",
+        path: 'users',
+        name: 'adminUsers',
+        component: AdminUsers,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: 'contacts',
+        name: 'adminContacts',
+        component: AdminContacts,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: 'notifications',
+        name: 'adminNotifications',
+        component: AdminNotifications,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: 'contents',
+        name: 'adminContents',
         component: AdminContents,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
-        path: "courses",
-        name: "adminCoursesList",
+        path: 'courses',
+        name: 'adminCoursesList',
         component: CourseList,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
-            path: 'course/:slug',
-            name: 'adminCourseDetail', // 👈 نامی که در RouterLink استفاده شده است
-            component: CourseDetail, // 👈 کامپوننتی که جزئیات دوره را نمایش می‌دهد
-        },
-    ]
+        path: 'course/:slug',
+        name: 'adminCourseDetail', // 👈 نامی که در RouterLink استفاده شده است
+        component: CourseDetail, // 👈 کامپوننتی که جزئیات دوره را نمایش می‌دهد
+      },
+    ],
   },
-
 
   // مسیر اصلی (Dashboard Layout)
   {
-    path: "/app",
+    path: '/app',
     component: Dashboard,
     meta: { requiresAuth: true },
     children: [
-      { path: "day", redirect: { name: "day" } },
+      { path: 'day', redirect: { name: 'day' } },
 
-      { path: "goals", name: "goals", component: GoalsTab },
-      { path: "year", name: "year", component: YearTab },
-      { path: "year-review", name: "yearReview", component: YearReview },
-      { path: "week", name: "week", component: WeekTab },
-      { path: "month", name: "month", component: MonthTab },
-      { path: "day", name: "day", component: DayTab },
-      { path: "settings", name: "settings", component: SettingTab },
-      { path: "notifications", name: "notifications", component: Notifications },
+      { path: 'goals', name: 'goals', component: GoalsTab },
+      { path: 'year', name: 'year', component: YearTab },
+      { path: 'year-review', name: 'yearReview', component: YearReview },
+      { path: 'week', name: 'week', component: WeekTab },
+      { path: 'month', name: 'month', component: MonthTab },
+      { path: 'day', name: 'day', component: DayTab },
+      { path: 'settings', name: 'settings', component: SettingTab },
+      { path: 'notifications', name: 'notifications', component: Notifications },
     ],
-
   },
 
   // مسیر 404
   {
     path: '/:catchAll(.*)*',
     name: 'NotFound',
-    component: NotFound
+    component: NotFound,
   },
 ]
 
@@ -148,31 +186,37 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
 
+  if (to.name === 'landing') {
+    to.meta.locale = to.params.locale
+  }
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     if (to.meta.requiresAdmin || to.path.startsWith('/admin')) {
-      return next({ name: "adminLogin", query: { redirect: to.fullPath } })
+      return next({ name: 'adminLogin', query: { redirect: to.fullPath } })
     }
 
-    return next({ name: "login" })
+    return next({ name: 'login' })
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    console.warn(`Access Denied for user ${auth.user?.name} (Role: ${auth.user?.role}) attempting to access ${to.path}`);
-    return next({ name: "goals" })
+    console.warn(
+      `Access Denied for user ${auth.user?.name} (Role: ${auth.user?.role}) attempting to access ${to.path}`,
+    )
+    return next({ name: 'goals' })
   }
 
-  if (to.meta.guest && auth.isAuthenticated) {
+  if (to.meta.guest && to.name !== 'landing' && auth.isAuthenticated) {
     if (auth.isAdmin) {
-      return next({ name: "admin" })
+      return next({ name: 'admin' })
     }
-    return next({ name: "day" })
+    return next({ name: 'day' })
   }
 
   return next()
 })
 
 router.afterEach((to) => {
-  document.title = to.meta.title || "Do it"
+  applySeo(to)
 })
 
 export default router

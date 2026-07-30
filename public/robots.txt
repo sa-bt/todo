@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /fa
+Allow: /en
+Disallow: /admin/
+Disallow: /app/
+Disallow: /vorod
+Disallow: /sabtenam
+
+Sitemap: https://sa-bt.ir/sitemap.xml
