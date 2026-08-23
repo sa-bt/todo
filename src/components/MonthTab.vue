@@ -8,15 +8,22 @@ import {
   getNextMonth,
 } from '@/utils/jalali'
 import { weightedPercent } from '@/utils/taskWeight'
+import { progressToDate } from '@/utils/progressToDate'
+import { toPersianNumber } from '@/utils/number'
 import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
   Clock,
   CalendarDays,
+  Loader2,
+  ListChecks,
+  XCircle,
+  CalendarCheck,
 } from 'lucide-vue-next'
 import TaskDayModal from './Month/TaskDayModal.vue'
-import TaskStatsCard from '@/components/Days/Card.vue'
+import TaskStatsCard from '@/components/UI/StatCard.vue'
+import PageHeader from '@/components/UI/PageHeader.vue'
 
 const tasksStore = useTasksStore()
 const goalsStore = useGoalsStore()
@@ -58,6 +65,18 @@ const remainingCount = computed(() =>
 
 // شمارش‌های بالا شمارش می‌مانند، درصد از اولویت هدف‌ها اثر می‌گیرد.
 const completedPercent = computed(() => weightedPercent(monthTasks.value))
+
+/*
+ * سه کارت بالا کل ماه را می‌سنجند، یعنی روزهای نرسیده هم در مخرجشان هستند. این
+ * کارت همان نسبت را فقط تا امروز می‌گیرد. برای ماه گذشته و ماه آینده خودش کنار
+ * می‌رود، چون آنجا حرف تازه‌ای ندارد. قاعده‌هایش در پیمانه است.
+ */
+const monthToDate = computed(() =>
+  progressToDate(monthTasks.value, {
+    start: monthInfo.value.apiStartDate,
+    end: monthInfo.value.apiEndDate,
+  })
+)
 
 async function loadData() {
   isRefreshing.value = true
@@ -140,69 +159,78 @@ watch(currentDate, async () => {
 </script>
 
 <template>
-  <div class="min-h-screen surface text-[var(--color-text)] px-3 py-4 sm:p-6">
-    <div class="max-w-6xl mx-auto space-y-5">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-[var(--color-heading)] flex items-center gap-2">
-            <CalendarDays class="w-6 h-6 text-[var(--color-primary)]" />
-            تقویم تسک‌ها
-          </h2>
-
-          <p class="text-sm text-text-secondary mt-1">
-            برای مدیریت تسک‌های هر روز، روی همان روز کلیک کن.
-          </p>
-        </div>
-
-        <div class="flex items-center justify-between sm:justify-center gap-3 rounded-2xl surface-soft border border-token px-3 py-2 shadow-sm">
+  <div class="page">
+    <PageHeader
+      title="تقویم کارها"
+      subtitle="برای دیدن و تغییر کارهای هر روز، روی همان روز کلیک کن."
+      :icon="CalendarDays"
+    >
+      <template #actions>
+        <div class="flex w-full items-center justify-between sm:w-auto sm:justify-center gap-2 rounded-xl surface-soft border border-token px-2 py-1.5">
           <button
+            type="button"
             @click="goToPreviousMonth"
-            class="btn-icon w-9 h-9 rounded-full hover:bg-[var(--color-background-soft)] text-[var(--color-primary)] tap-target"
+            class="tap-target w-9 h-9 rounded-full hover-surface-mute text-[var(--color-primary)]"
             aria-label="ماه قبل"
           >
-            <ChevronRight class="w-5 h-5" />
+            <ChevronRight class="w-5 h-5" aria-hidden="true" />
           </button>
 
-          <h3 class="min-w-32 text-center text-base sm:text-lg font-bold text-[var(--color-heading)]">
+          <span class="min-w-32 text-center text-base font-bold text-[var(--color-heading)]">
             {{ monthInfo.monthName }} {{ monthInfo.year }}
-          </h3>
+          </span>
 
           <button
+            type="button"
             @click="goToNextMonth"
-            class="btn-icon w-9 h-9 rounded-full hover:bg-[var(--color-background-soft)] text-[var(--color-primary)] tap-target"
+            class="tap-target w-9 h-9 rounded-full hover-surface-mute text-[var(--color-primary)]"
             aria-label="ماه بعد"
           >
-            <ChevronLeft class="w-5 h-5" />
+            <ChevronLeft class="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
-      </div>
+      </template>
+    </PageHeader>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="flex flex-col gap-6">
+      <div
+        class="grid grid-cols-1 gap-4"
+        :class="monthToDate.applicable ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'"
+      >
         <TaskStatsCard
-          title="کل تسک‌ها"
+          title="همه کارها"
           :value="monthTasks.length"
-          icon="ListChecks"
+          :icon="ListChecks"
           color="blue"
         />
 
         <TaskStatsCard
-          title="انجام شده"
+          title="انجام‌شده"
           :value="completedCount"
-          icon="CheckCircle"
+          :icon="CheckCircle"
           color="green"
           :progress="completedPercent"
         />
 
         <TaskStatsCard
-          title="باقی مانده"
+          title="باقی‌مانده"
           :value="remainingCount"
-          icon="XCircle"
+          :icon="XCircle"
           color="orange"
           :progress="100 - completedPercent"
         />
+
+        <TaskStatsCard
+          v-if="monthToDate.applicable"
+          title="تا امروز"
+          :value="`${toPersianNumber(monthToDate.done)} از ${toPersianNumber(monthToDate.total)}`"
+          :icon="CalendarCheck"
+          color="indigo"
+          :progress="monthToDate.percent"
+        />
       </div>
 
-      <div class="rounded-3xl surface-soft border border-token shadow-sm overflow-hidden">
+      <div class="rounded-2xl surface-soft border border-token shadow-sm overflow-hidden">
         <div class="grid grid-cols-7 text-center bg-[var(--color-background-soft)]/70 border-b border-token">
           <div
             v-for="dayName in monthInfo.dayNames"
@@ -246,7 +274,7 @@ watch(currentDate, async () => {
                       'bg-[var(--color-background-soft)] text-[var(--color-heading)]': !dayData.isToday,
                     }"
                   >
-                    {{ dayData.dayOfMonth }}
+                    {{ toPersianNumber(dayData.dayOfMonth) }}
                   </span>
 
                   <span
@@ -257,7 +285,7 @@ watch(currentDate, async () => {
                       'bg-[var(--color-background-soft)] text-text-secondary': !dayData.isToday,
                     }"
                   >
-                    {{ dayData.tasks.length }} تسک
+                    {{ toPersianNumber(dayData.tasks.length) }} کار
                   </span>
                 </div>
 
@@ -265,7 +293,11 @@ watch(currentDate, async () => {
                   <span
                     v-if="dayData.hasTasks"
                     class="w-1.5 h-1.5 rounded-full"
-                    :class="dayData.completedCount === dayData.tasks.length ? 'bg-green-500' : 'bg-orange-500'"
+                    :style="{
+                      background: dayData.completedCount === dayData.tasks.length
+                        ? 'var(--color-success)'
+                        : 'var(--color-warning)',
+                    }"
                   ></span>
 
                   <span
@@ -273,7 +305,7 @@ watch(currentDate, async () => {
                     class="text-[10px] font-bold"
                     :class="{ 'text-white': dayData.isToday, 'text-text-secondary': !dayData.isToday }"
                   >
-                    {{ dayData.tasks.length }}
+                    {{ toPersianNumber(dayData.tasks.length) }}
                   </span>
                 </div>
 
@@ -289,10 +321,8 @@ watch(currentDate, async () => {
                     <CheckCircle
                       v-if="dayData.completedCount === dayData.tasks.length"
                       class="w-4 h-4"
-                      :class="{
-                        'text-white': dayData.isToday,
-                        'text-green-500': !dayData.isToday,
-                      }"
+                      :class="{ 'text-white': dayData.isToday }"
+                      :style="dayData.isToday ? undefined : { color: 'var(--color-success)' }"
                     />
 
                     <Clock
@@ -311,7 +341,7 @@ watch(currentDate, async () => {
                         'text-[var(--color-heading)]': !dayData.isToday,
                       }"
                     >
-                      {{ dayData.completedCount }}/{{ dayData.tasks.length }}
+                      {{ toPersianNumber(dayData.completedCount) }}/{{ toPersianNumber(dayData.tasks.length) }}
                     </span>
                   </div>
 
@@ -344,8 +374,8 @@ watch(currentDate, async () => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
     >
       <div class="surface-soft border border-token rounded-2xl px-6 py-5 shadow-xl flex flex-col items-center gap-3">
-        <div class="w-12 h-12 border-4 border-[var(--color-primary)] border-dashed rounded-full animate-spin"></div>
-        <p class="text-sm text-text-secondary">در حال بارگذاری...</p>
+        <Loader2 class="w-8 h-8 animate-spin text-[var(--color-primary)]" aria-hidden="true" />
+        <p class="text-sm text-text-secondary">در حال بارگذاری…</p>
       </div>
     </div>
   </div>

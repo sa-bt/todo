@@ -127,28 +127,28 @@ function getGoalTitle(task) {
     ></div>
 
     <div
-      class="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-token surface-soft outline-none max-h-[88vh] overflow-y-auto"
+      class="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-token surface-soft outline-none max-h-[88vh] overflow-y-auto"
       tabindex="-1"
     >
       <div
         v-if="isToggling"
-        class="absolute inset-0 z-20 rounded-t-3xl sm:rounded-3xl bg-black/5 backdrop-blur-[1px] pointer-events-none"
+        class="absolute inset-0 z-20 rounded-t-2xl sm:rounded-2xl bg-black/5 backdrop-blur-[1px] pointer-events-none"
       ></div>
 
       <div class="flex justify-between items-start gap-3 mb-5 border-b border-token pb-4">
         <div>
           <h3 class="text-lg sm:text-xl font-black text-[var(--color-heading)]">
-            تسک‌های روز {{ dayData.dayOfMonth }} {{ dayLabel }}
+            کارهای روز {{ dayData.dayOfMonth }} {{ dayLabel }}
           </h3>
           <p class="text-xs sm:text-sm text-text-secondary mt-1">
-            برای تغییر وضعیت، روی کارت تسک کلیک کن.
+            برای تغییر وضعیت، روی هر کار کلیک کن.
           </p>
         </div>
 
         <button
           @click="closeModal"
           :disabled="isBusy"
-          class="w-9 h-9 flex items-center justify-center rounded-full hover:surface-mute text-text-secondary tap-target"
+          class="w-9 h-9 flex items-center justify-center rounded-full hover-surface-mute text-text-secondary tap-target"
           :class="{ 'opacity-50 cursor-not-allowed': isBusy }"
           aria-label="بستن"
         >
@@ -165,7 +165,7 @@ function getGoalTitle(task) {
           :disabled="isToggling"
           class="w-full p-3.5 rounded-2xl surface flex items-center justify-between gap-3 text-right border border-token transition-all duration-200 hover:shadow-md tap-target"
           :class="{
-            'opacity-80 bg-green-500/10 border-green-500/20': task.is_done,
+            'opacity-80 bg-[color-mix(in_oklab,var(--color-success)_12%,transparent)]': task.is_done,
             'opacity-55 cursor-not-allowed': isToggling && togglingTaskId !== task.id,
             'cursor-wait ring-2 ring-[var(--color-primary)]/30': togglingTaskId === task.id,
           }"
@@ -173,10 +173,10 @@ function getGoalTitle(task) {
           <div class="flex items-center gap-3 min-w-0">
             <span
               class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-token"
-              :class="{
-                'bg-green-500 text-white border-green-500': task.is_done,
-                'bg-token text-text-secondary': !task.is_done,
-              }"
+              :class="{ 'text-white': task.is_done, 'surface-mute text-text-secondary': !task.is_done }"
+              :style="task.is_done
+                ? { background: 'var(--color-success)', borderColor: 'var(--color-success)' }
+                : undefined"
             >
               <Loader2
                 v-if="togglingTaskId === task.id"
@@ -201,19 +201,21 @@ function getGoalTitle(task) {
               </p>
 
               <p class="text-xs text-text-secondary mt-1">
-                {{ task.is_done ? 'انجام شده' : 'در انتظار انجام' }}
+                {{ task.is_done ? 'انجام‌شده' : 'باقی‌مانده' }}
               </p>
             </div>
           </div>
 
           <span
             class="hidden sm:inline-flex text-xs px-2 py-1 rounded-full"
-            :class="{
-              'bg-green-500/10 text-green-600': task.is_done,
-              'bg-orange-500/10 text-orange-500': !task.is_done,
+            :style="{
+              color: task.is_done ? 'var(--color-success)' : 'var(--color-warning)',
+              background: task.is_done
+                ? 'color-mix(in oklab, var(--color-success) 12%, transparent)'
+                : 'color-mix(in oklab, var(--color-warning) 12%, transparent)',
             }"
           >
-            {{ task.is_done ? 'Done' : 'Pending' }}
+            {{ task.is_done ? 'انجام‌شده' : 'باقی‌مانده' }}
           </span>
         </button>
       </div>
@@ -222,7 +224,7 @@ function getGoalTitle(task) {
         v-else
         class="text-center py-8 text-text-secondary surface-mute rounded-2xl border border-dashed border-token"
       >
-        تسک فعالی برای این روز ثبت نشده است.
+        هنوز کاری برای این روز ثبت نشده است.
       </div>
 
       <div class="mt-6 pt-4 border-t border-token">
@@ -234,19 +236,19 @@ function getGoalTitle(task) {
           :class="{ 'opacity-50 cursor-not-allowed': isBusy }"
         >
           <Plus class="w-5 h-5 ml-2" />
-          اضافه کردن تسک جدید
+          افزودن کار
         </button>
 
         <p
           v-else-if="!isAdding && availableGoalOptions.length === 0"
-          class="text-sm text-red-500 text-center"
+          class="text-sm text-center text-[var(--color-text-secondary)]"
         >
-          تمام اهداف موجود قبلاً برای این روز تسک دارند.
+          برای همه اهداف در این روز کار ثبت شده است.
         </p>
 
         <div v-if="isAdding" class="space-y-3">
           <p class="text-sm text-text-secondary">
-            یک هدف را برای اضافه کردن به این روز انتخاب کنید:
+            یک هدف را برای این روز انتخاب کن:
           </p>
 
           <BaseSelect

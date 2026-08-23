@@ -105,7 +105,7 @@ export const useTasksStore = defineStore('tasks', {
 
         notify.setNotification({
           type: 'error',
-          message: 'در ایجاد تسک مشکلی پیش آمد.',
+          message: 'افزودن کار ناموفق بود.',
           icon: 'alert-triangle',
           sound: false,
           duration: 4000,
@@ -173,7 +173,7 @@ export const useTasksStore = defineStore('tasks', {
 
         notify.setNotification({
           type: 'error',
-          message: 'در بروزرسانی تسک مشکلی پیش آمد.',
+          message: 'ذخیره کار ناموفق بود.',
           icon: 'alert-triangle',
           sound: false,
           duration: 4000,
@@ -211,7 +211,7 @@ export const useTasksStore = defineStore('tasks', {
 
         notify.setNotification({
           type: 'success',
-          message: 'تسک با موفقیت حذف شد.',
+          message: 'کار حذف شد.',
           icon: 'trash-2',
           sound: false,
           duration: 3000,
@@ -221,7 +221,7 @@ export const useTasksStore = defineStore('tasks', {
 
         notify.setNotification({
           type: 'error',
-          message: 'حذف تسک با شکست مواجه شد.',
+          message: 'حذف کار ناموفق بود.',
           icon: 'alert-triangle',
           sound: false,
           duration: 4000,

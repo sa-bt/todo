@@ -2,10 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useGoalsStore } from '@/stores/goals'
-import TaskStatsCard from '@/components/Days/Card.vue'
+import { Plus, ListChecks, CheckCircle, XCircle } from 'lucide-vue-next'
+import TaskStatsCard from '@/components/UI/StatCard.vue'
 import TaskItem from '@/components/Days/TaskItem.vue'
 import AddTaskModal from '@/components/Days/AddTaskModal.vue'
-import DeleteConfirmModal from './DeleteConfirmModal.vue'
+import ConfirmDialog from '@/components/UI/ConfirmDialog.vue'
+import PageHeader from '@/components/UI/PageHeader.vue'
+import EmptyState from '@/components/UI/EmptyState.vue'
+import LoadingState from '@/components/UI/LoadingState.vue'
+import BaseButton from '@/components/UI/BaseButton.vue'
 import { getTodayShamsi, getTodayGregorian } from '@/utils/jalali'
 import { weightedPercent } from '@/utils/taskWeight'
 
@@ -90,8 +95,11 @@ async function performDelete() {
   taskToDelete.value = null
 }
 
-onMounted(async () => {
+const loadError = ref(false)
+
+async function loadData() {
   loading.value = true
+  loadError.value = false
 
   try {
     await Promise.all([
@@ -101,90 +109,86 @@ onMounted(async () => {
         end_date: todayApiDate.value,
       }),
     ])
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadData)
 </script>
 
 <template>
-  <div class="min-h-screen surface text-[var(--color-text)] px-3 py-4 sm:p-6">
-    <div class="max-w-6xl mx-auto">
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-5">
-        <div>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-[var(--color-heading)] text-right">
-            تسک‌های امروز
-          </h2>
-          <p class="text-sm text-text-secondary mt-1 text-right">
-            امروز: {{ todayShamsiDate }}
-          </p>
-        </div>
+  <div class="page">
+    <PageHeader title="کارهای امروز" :subtitle="`امروز: ${todayShamsiDate}`">
+      <template #actions>
+        <BaseButton :disabled="isTaskTogglePending" @click="openModal">
+          <Plus class="w-4 h-4" aria-hidden="true" />
+          افزودن کار
+        </BaseButton>
+      </template>
+    </PageHeader>
 
-        <button
-          @click="openModal"
-          :disabled="isTaskTogglePending"
-          class="tap-target inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold text-white text-sm bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] shadow-lg shadow-[var(--color-primary)]/30 transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.97]"
-          :class="{ 'opacity-50 cursor-not-allowed': isTaskTogglePending }"
-        >
-          <span class="text-lg leading-none">➕</span>
-          <span>افزودن تسک</span>
-        </button>
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <TaskStatsCard
+        title="همه کارها"
+        :value="todayTasks.length"
+        :icon="ListChecks"
+        color="blue"
+      />
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <TaskStatsCard
-          title="کل تسک‌ها"
-          :value="todayTasks.length"
-          icon="ListChecks"
-          color="blue"
-        />
+      <TaskStatsCard
+        title="انجام‌شده"
+        :value="completedCount"
+        :icon="CheckCircle"
+        color="green"
+        :progress="completedPercent"
+      />
 
-        <TaskStatsCard
-          title="انجام شده"
-          :value="completedCount"
-          icon="CheckCircle"
-          color="green"
-          :progress="completedPercent"
-        />
-
-        <TaskStatsCard
-          title="باقی مانده"
-          :value="remainingCount"
-          icon="XCircle"
-          color="orange"
-          :progress="100 - completedPercent"
-        />
-      </div>
-
-      <div v-if="loading" class="text-center py-6 mt-10">
-        <div class="w-12 h-12 border-4 border-[var(--color-primary)] border-dashed rounded-full animate-spin mx-auto"></div>
-        <p class="mt-3 text-text-secondary">در حال بارگذاری تسک‌های امروز…</p>
-      </div>
-
-      <div v-else class="mt-6">
-        <ul
-          v-if="todayTasks.length"
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 content-start"
-        >
-          <TaskItem
-            v-for="task in todayTasks"
-            :key="task.id"
-            :task="task"
-            :disabled="isTaskTogglePending"
-            :loading="pendingTaskId === task.id"
-            @toggle="toggleDone"
-            @remove="confirmRemove"
-          />
-        </ul>
-
-        <div
-          v-else
-          class="text-text-secondary text-center py-12 surface-soft rounded-3xl border border-dashed border-token"
-        >
-          هیچ تسکی برای امروز ثبت نشده است
-        </div>
-      </div>
+      <TaskStatsCard
+        title="باقی‌مانده"
+        :value="remainingCount"
+        :icon="XCircle"
+        color="orange"
+        :progress="100 - completedPercent"
+      />
     </div>
+
+    <LoadingState v-if="loading" title="در حال بارگذاری کارهای امروز…" />
+
+    <EmptyState
+      v-else-if="loadError"
+      variant="error"
+      title="دریافت کارهای امروز ناموفق بود"
+      description="اتصال اینترنت را بررسی کن و دوباره تلاش کن."
+      action-label="تلاش دوباره"
+      @action="loadData"
+    />
+
+    <ul
+      v-else-if="todayTasks.length"
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 content-start"
+    >
+      <TaskItem
+        v-for="task in todayTasks"
+        :key="task.id"
+        :task="task"
+        :disabled="isTaskTogglePending"
+        :loading="pendingTaskId === task.id"
+        @toggle="toggleDone"
+        @remove="confirmRemove"
+      />
+    </ul>
+
+    <EmptyState
+      v-else
+      variant="empty"
+      title="هنوز کاری برای امروز ثبت نشده است"
+      description="یکی از اهدافت را انتخاب کن تا اولین کار امروز ساخته شود."
+      action-label="افزودن کار"
+      @action="openModal"
+    />
 
     <AddTaskModal
       v-if="showModal"
@@ -194,11 +198,13 @@ onMounted(async () => {
       @add="addTask"
     />
 
-    <DeleteConfirmModal
-      :show="showDeleteModal"
-      title="حذف تسک"
-      message="آیا از حذف این تسک اطمینان دارید؟"
-      @close="showDeleteModal = false"
+    <ConfirmDialog
+      :open="showDeleteModal"
+      title="حذف کار"
+      message="این کار حذف شود؟ این عمل قابل بازگشت نیست."
+      confirm-label="حذف"
+      variant="danger"
+      @cancel="showDeleteModal = false"
       @confirm="performDelete"
     />
   </div>

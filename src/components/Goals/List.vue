@@ -22,9 +22,12 @@ import {
   ListTree,
   Info,
   Hash,
+  Search,
 } from 'lucide-vue-next'
 import BaseSelect from '../UI/BaseSelect.vue'
-import ConfirmDeleteModal from './ConfirmDeleteGoalModal.vue'
+import ConfirmDialog from '../UI/ConfirmDialog.vue'
+import EmptyState from '../UI/EmptyState.vue'
+import LoadingState from '../UI/LoadingState.vue'
 import GoalStatsModal from './GoalStatsModal.vue'
 
 
@@ -182,7 +185,7 @@ const stripsByGoal = computed(() => {
         level: getLevel(total, done),
         title: total
           ? `${toPersianDate(day)} — ${toPersianNumber(done)} از ${toPersianNumber(total)}`
-          : `${toPersianDate(day)} — بدون تسک`,
+          : `${toPersianDate(day)} — بدون کار`,
       }
     })
   })
@@ -239,16 +242,20 @@ async function proceedDelete() {
 </script>
 
 <template>
-  <div class="space-y-8">
+  <div class="space-y-6">
     <!-- فیلتر و جستجو -->
-    <div class="p-6 rounded-3xl border border-token shadow-sm bg-[var(--color-background-soft)]">
+    <div class="p-4 sm:p-6 rounded-2xl border border-token shadow-sm surface-soft">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <input
-          v-model="search"
-          type="text"
-          placeholder="🔍 جستجو در اهداف (عنوان/توضیحات)..."
-          class="w-full md:w-1/3 p-3.5 rounded-xl border-2 border-token shadow-inner-sm focus:border-[var(--color-primary)] card-bg text-right custom-input transition"
-        />
+        <div class="relative w-full md:w-1/3">
+          <Search class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
+          <input
+            v-model="search"
+            type="text"
+            aria-label="جستجو در اهداف"
+            placeholder="جستجو در عنوان یا توضیح هدف"
+            class="w-full rounded-xl border border-token text-right custom-input transition pr-3 pl-9"
+          />
+        </div>
         <div class="flex flex-wrap gap-3 justify-end w-full md:w-auto">
           <BaseSelect
             v-model="statusFilter"
@@ -267,48 +274,24 @@ async function proceedDelete() {
     </div>
 
     <!-- لودر -->
-    <div v-if="store.loading" class="text-center py-12">
-      <svg
-        class="animate-spin h-8 w-8 text-[var(--color-primary)] mx-auto"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
-      <p class="mt-4 text-[var(--color-text)]/70">در حال بارگذاری اهداف...</p>
-    </div>
+    <LoadingState v-if="store.loading" title="در حال بارگذاری اهداف…" />
 
     <!-- خالی -->
-    <div
+    <EmptyState
       v-else-if="filteredGoals.length === 0"
-      class="text-center py-12 card-bg border border-token rounded-3xl shadow-sm"
-    >
-      <div class="mb-2 text-xl font-bold text-[var(--color-heading)]">
-        چیزی مطابق با فیلترها پیدا نشد!
-      </div>
-      <p class="text-text-secondary text-sm mb-6">
-        فیلترهای جستجو و وضعیت را بررسی کن یا هدف جدیدی بساز.
-      </p>
-      <button
-        @click="$emit('onEdit', null)"
-        class="tap-target px-6 py-3 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-semibold inline-flex items-center gap-2 transition transform hover:scale-[1.01] shadow-md shadow-[var(--color-primary)]/30"
-      >
-        <Plus class="w-5 h-5" /> افزودن هدف جدید
-      </button>
-    </div>
+      variant="filter"
+      title="هدفی با این فیلترها پیدا نشد"
+      description="جستجو و فیلترها را بررسی کن، یا هدف تازه‌ای بساز."
+      action-label="افزودن هدف"
+      @action="$emit('onEdit', null)"
+    />
 
     <!-- لیست اهداف -->
     <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div
         v-for="goal in filteredGoals"
         :key="goal.id"
-        class="goal-card p-7 rounded-3xl border border-token shadow-sm flex flex-col justify-between card-bg transition-all duration-200 hover:shadow-md"
+        class="goal-card p-5 sm:p-6 border border-token shadow-sm flex flex-col justify-between transition-all duration-200 hover:shadow-md"
       >
         <!--
           اولویت فقط از راه تسک به وزن تبدیل می‌شود و هدف والد تسک نمی‌گیرد،
@@ -440,10 +423,10 @@ async function proceedDelete() {
 
           <div v-else class="text-sm text-text-secondary/80 pt-3 mt-3">
             <template v-if="goal.children_count > 0">
-              (این هدف اصلی است و آمار تسک‌ها برای {{ goal.children_count }} زیرمجموعه آن محاسبه
-              نمی‌شود.)
+              این هدف اصلی است و آمار کارها برای {{ toPersianNumber(goal.children_count) }} زیرمجموعه آن
+              حساب نمی‌شود.
             </template>
-            <template v-else> (تسک یا آمار عملکردی برای این هدف ثبت نشده است.) </template>
+            <template v-else> هنوز کاری برای این هدف ثبت نشده است. </template>
           </div>
         </div>
 
@@ -458,9 +441,10 @@ async function proceedDelete() {
             v-if="goal.children_count === 0"
             @click="$emit('onAddTask', goal)"
             class="btn-ghost-primary tap-target flex items-center gap-1.5 has-tip"
-            data-tip="افزودن تسک"
+            data-tip="افزودن کار"
+            aria-label="افزودن کار"
           >
-            <Plus class="w-4 h-4" /><span class="hidden sm:inline font-bold">تسک</span>
+            <Plus class="w-4 h-4" /><span class="hidden sm:inline font-bold">کار</span>
           </button>
 
           <div class="flex items-center gap-2">
@@ -503,9 +487,12 @@ async function proceedDelete() {
   </div>
 
   <!-- مودال‌ها -->
-  <ConfirmDeleteModal
-    v-model:show="showConfirm"
-    :goal-id="selectedGoalId"
+  <ConfirmDialog
+    :open="showConfirm"
+    title="حذف هدف"
+    message="این هدف حذف شود؟ این عمل قابل بازگشت نیست."
+    confirm-label="حذف"
+    variant="danger"
     @cancel="cancelDelete"
     @confirm="proceedDelete"
   />
@@ -530,7 +517,7 @@ async function proceedDelete() {
 }
 .custom-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 24%, white);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 24%, transparent);
 }
 
 /* ---------------- Card: ساده و مینیمال ---------------- */
@@ -538,7 +525,7 @@ async function proceedDelete() {
   position: relative;
   background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: 1rem;
 }
 
 /* بدون گرادیان/افکت‌های تند؛ فقط هاور خیلی ملایم */
@@ -610,19 +597,19 @@ async function proceedDelete() {
   opacity: 0.95;
 }
 .chip-primary {
-  background: color-mix(in oklab, var(--color-primary) 8%, white);
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
   color: var(--color-primary);
   border-color: color-mix(in oklab, var(--color-primary) 20%, var(--color-border));
 }
 .chip-secondary {
-  background: color-mix(in oklab, var(--color-secondary) 8%, white);
+  background: color-mix(in oklab, var(--color-secondary) 12%, transparent);
   color: var(--color-secondary);
   border-color: color-mix(in oklab, var(--color-secondary) 20%, var(--color-border));
 }
 .chip-neutral {
-  background: color-mix(in oklab, var(--color-border) 30%, white);
+  background: var(--color-background-soft);
   color: var(--color-heading);
-  border-color: color-mix(in oklab, var(--color-border) 55%, white);
+  border-color: var(--color-border);
 }
 
 /* ---------------- نوار اکشن کارت ---------------- */
@@ -831,10 +818,12 @@ async function proceedDelete() {
   }
 }
 
-/* فallback برای مرورگرهای بدون dvh */
+/* fallback برای مرورگرهای بدون dvh */
 @supports not (height: 100dvh) {
-  .max-h-\[min\(92dvh,
-  900px\)\] {
+  /* prettier-ignore */
+  /* The selector must stay on one line: wrapping it split the escaped class
+     name and the whole block failed to parse (esbuild css-syntax-error). */
+  .max-h-\[min\(92dvh\,900px\)\] {
     max-height: 92vh;
   }
 }

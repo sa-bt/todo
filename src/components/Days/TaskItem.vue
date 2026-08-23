@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Check, Trash2, Loader2 } from 'lucide-vue-next'
+import { Check, Trash2, Loader2, Calendar, ChevronLeft } from 'lucide-vue-next'
 import { useGoalsStore } from '@/stores/goals'
 
 const props = defineProps({
@@ -96,7 +96,7 @@ function handleRemove() {
               border: '1px solid var(--color-border)'
             }"
         >
-          📅 {{ props.task.day }}
+          <Calendar class="inline-block w-3 h-3 -mt-0.5 ml-1" aria-hidden="true" />{{ props.task.day }}
         </span>
       </div>
 
@@ -107,11 +107,13 @@ function handleRemove() {
         <button
           @click.stop="handleRemove"
           :disabled="disabled || loading"
-          class="p-2 rounded-full text-gray-400
-                   hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20
-                   opacity-0 group-hover:opacity-100 transition-all duration-200 focus:outline-none
-                   disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-gray-400 disabled:hover:bg-transparent"
-          title="حذف تسک"
+          type="button"
+          class="tap-target p-2 rounded-full text-[var(--color-text-secondary)]
+                   hover:text-[var(--color-danger)]
+                   opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200
+                   disabled:cursor-not-allowed disabled:opacity-30"
+          title="حذف کار"
+          aria-label="حذف کار"
         >
           <Trash2 class="w-4 h-4" />
         </button>
@@ -120,16 +122,11 @@ function handleRemove() {
         <div
           class="text-text-secondary p-1 transition-colors duration-200"
           :class="{
-              'hover:text-heading': !disabled && !loading,
+              'hover:text-[var(--color-heading)]': !disabled && !loading,
               'opacity-40': disabled || loading
             }"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               class="lucide lucide-chevron-left">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
+          <ChevronLeft class="w-5 h-5" aria-hidden="true" />
         </div>
 
       </div>

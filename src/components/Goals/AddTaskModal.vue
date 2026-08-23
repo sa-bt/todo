@@ -2,6 +2,7 @@
 import { ref, watch, computed, nextTick, onBeforeUnmount } from 'vue'
 import Datepicker from 'vue3-persian-datetime-picker'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
+import BaseButton from '@/components/UI/BaseButton.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { Calendar, Repeat2, AlertCircle, Clock, Target, X, CheckCircle } from 'lucide-vue-next'
 
@@ -110,11 +111,11 @@ async function submitTask() {
   if (isSubmitDisabled.value) {
     // ... (نمایش نوتیفیکیشن‌های اعتبارسنجی)
     if (!selectedDate.value)
-      notification.setNotification({ message: 'تاریخ شروع تسک را انتخاب کنید.', type: 'error' })
+      notification.setNotification({ message: 'تاریخ شروع کار را انتخاب کن.', type: 'error' })
     if (mode.value === 'custom' && Number(amount.value) < 1)
-      notification.setNotification({ message: 'مدت تسک باید بزرگتر از ۰ باشد.', type: 'error' })
+      notification.setNotification({ message: 'مدت کار باید بزرگ‌تر از صفر باشد.', type: 'error' })
     if (patternMode.value === 'weekly' && selectedDays.value.length === 0)
-      notification.setNotification({ message: 'در الگوی هفتگی، حداقل یک روز هفته باید انتخاب شود.', type: 'error' })
+      notification.setNotification({ message: 'در الگوی هفتگی، دست‌کم یک روز هفته باید انتخاب شود.', type: 'error' })
     return
   }
 
@@ -152,7 +153,7 @@ async function submitTask() {
     if (props.autoCloseOnSubmit) emit('close')
   } catch(error) {
     console.error('Failed to create task:', error)
-    notification.setNotification({ message: 'خطا در ثبت تسک!', type: 'error' })
+    notification.setNotification({ message: 'افزودن کار ناموفق بود.', type: 'error' })
   } finally {
     loading.value = false
   }
@@ -175,7 +176,7 @@ async function submitTask() {
           <header class="sticky top-0 z-10 card-bg border-b border-token px-6 py-4 flex items-center justify-between">
             <h2 id="task-modal-title" class="text-xl font-extrabold text-[var(--color-heading)] flex items-center gap-2 justify-end">
                 <Repeat2 class="w-5 h-5 text-[var(--color-primary)]"/>
-                تسک جدید برای: {{ props.goal?.title }}
+                کار تازه برای: {{ props.goal?.title }}
             </h2>
             <button @click="$emit('close')" class="p-1 rounded-full text-text-secondary hover:text-[var(--color-heading)] transition">
                 <X class="w-6 h-6" />
@@ -195,13 +196,13 @@ async function submitTask() {
                   format="jYYYY/jMM/jDD"
                   type="date"
                   locale="fa"
-                  :input-class="'w-full p-3 rounded-lg border border-token card-bg ring-focus text-[var(--color-text)]'"
+                  :input-class="'w-full p-3 rounded-xl border border-token card-bg ring-focus text-[var(--color-text)]'"
               />
             </div>
 
             <div class="border border-token rounded-xl p-4 bg-[var(--color-background-soft)] space-y-4">
                <div class="text-base font-semibold text-[var(--color-heading)] flex items-center gap-2">
-                    <Clock class="w-4 h-4 text-[var(--color-primary)]"/> مدت زمان تسک
+                    <Clock class="w-4 h-4 text-[var(--color-primary)]"/> مدت کار
                 </div>
 
               <div class="flex gap-4 mb-3 text-sm">
@@ -219,7 +220,7 @@ async function submitTask() {
                       v-for="opt in durationOptions"
                       :key="opt.value"
                       @click="setShortcut(opt.value)"
-                      class="tap-target px-3 py-2 rounded-lg transition flex items-center gap-1 text-sm font-medium"
+                      class="tap-target px-3 py-2 rounded-xl transition flex items-center gap-1 text-sm font-medium"
                       :class="{
                         'bg-[var(--color-primary)] text-white shadow-md': duration === opt.value,
                         'card-bg border border-token hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)]': duration !== opt.value
@@ -244,10 +245,10 @@ async function submitTask() {
                     type="number"
                     min="1"
                     placeholder="تعداد روزها"
-                    class="w-full p-3 rounded-lg border border-token card-bg ring-focus text-[var(--color-text)]"
+                    class="w-full p-3 rounded-xl border border-token card-bg ring-focus text-[var(--color-text)]"
                 />
                 <p class="text-xs text-text-secondary">
-                  مثلا اگر **۱۰** وارد کنی، از تاریخ شروع به مدت **۱۰ روز** تسک ساخته می‌شود.
+                  مثلاً با عدد ۱۰، از تاریخ شروع به مدت ده روز کار ساخته می‌شود.
                 </p>
               </div>
             </div>
@@ -260,12 +261,12 @@ async function submitTask() {
               <div class="flex flex-col gap-3 text-sm border-b border-token pb-3">
                 <label class="inline-flex items-center gap-2 cursor-pointer font-medium p-1 rounded transition hover:bg-[var(--color-background-soft-hover)]">
                   <input type="radio" value="daily" v-model="patternMode" />
-                  روزانه (هر روز تسک ایجاد شود)
+                  روزانه (هر روز یک کار)
                 </label>
 
                 <label class="inline-flex items-center gap-2 cursor-pointer font-medium p-1 rounded transition hover:bg-[var(--color-background-soft-hover)]">
                   <input type="radio" value="alternate" v-model="patternMode" />
-                  یک‌روزدرمیان (Every other day)
+                  یک روز در میان
                 </label>
 
                 <label class="inline-flex items-center gap-2 cursor-pointer font-medium p-1 rounded transition hover:bg-[var(--color-background-soft-hover)]">
@@ -275,9 +276,9 @@ async function submitTask() {
               </div>
 
               <div class="pt-2">
-                  <div v-if="patternMode === 'alternate'" class="pl-2 pr-1 p-3 rounded-lg border border-token bg-white/5">
+                  <div v-if="patternMode === 'alternate'" class="pl-2 pr-1 p-3 rounded-lg border border-token surface-soft">
                     <div class="text-xs text-text-secondary mb-3">
-                      شروع از تاریخ انتخابی به عنوان **«روز ۱»**. انتخاب کن که تسک‌ها در روزهای **فرد** ساخته شوند یا **زوج**.
+                      تاریخ انتخابی «روز یک» است. مشخص کن کارها در روزهای فرد ساخته شوند یا زوج.
                     </div>
                     <div class="flex gap-4 text-sm">
                       <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -291,7 +292,7 @@ async function submitTask() {
 
                   <div v-else-if="patternMode === 'weekly'" class="mt-3 space-y-3">
                     <label class="text-sm font-medium mb-2 block text-[var(--color-text)]">
-                        روزهای مورد نظر را انتخاب کنید:
+                        روزهای دلخواه را انتخاب کن:
                     </label>
                     <div class="flex flex-wrap gap-2 justify-start">
                         <button 
@@ -302,14 +303,14 @@ async function submitTask() {
                             class="tap-target w-8 h-8 rounded-full font-medium transition text-sm flex items-center justify-center border"
                             :class="{ 
                                 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md': selectedDays.includes(day.value), 
-                                'bg-white/10 border-token hover:bg-white/20 text-[var(--color-text)]': !selectedDays.includes(day.value)
+                                'surface border-token hover-surface-soft text-[var(--color-text)]': !selectedDays.includes(day.value)
                             }"
                         >
                             {{ day.label }}
                         </button>
                     </div>
                     <p v-if="isSubmitDisabled && selectedDays.length === 0" class="text-red-500 text-xs mt-2 flex items-center gap-1">
-                        <AlertCircle class="w-4 h-4"/> در الگوی هفتگی، حداقل یک روز هفته باید انتخاب شود.
+                        <AlertCircle class="w-4 h-4"/> در الگوی هفتگی، دست‌کم یک روز هفته باید انتخاب شود.
                     </p>
                   </div>
                   
@@ -318,21 +319,10 @@ async function submitTask() {
           </section>
 
           <footer class="sticky bottom-0 z-10 card-bg border-t border-token px-6 py-4 flex items-center justify-end gap-3">
-            <button
-                @click="$emit('close')"
-                class="tap-target px-5 py-2.5 rounded-xl bg-[var(--color-background-soft)] hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)] transition font-medium"
-            >
-              انصراف
-            </button>
-            <button
-                @click="submitTask"
-                :disabled="isSubmitDisabled"
-                class="tap-target px-5 py-2.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 font-medium"
-                :aria-busy="loading ? 'true' : 'false'"
-            >
-              <span v-if="loading" class="animate-spin border-2 border-white border-t-transparent w-4 h-4 rounded-full" aria-hidden="true"></span>
-              ثبت نهایی
-            </button>
+            <BaseButton variant="ghost" @click="$emit('close')">انصراف</BaseButton>
+            <BaseButton :disabled="isSubmitDisabled" :loading="loading" @click="submitTask">
+              افزودن کار
+            </BaseButton>
           </footer>
         </div>
       </div>

@@ -25,20 +25,27 @@ export const useNotificationStore = defineStore('notification', {
             this.duration = 5000
         },
 
-        handleApiError(error) {
-            let message = 'خطای ناشناخته در ارتباط با سرور.'
+        /**
+         * @param {object} error - the rejected axios error
+         * @param {string} [fallback] - shown when the server sends no usable
+         *   message. Several callers already passed this argument, but the
+         *   parameter was missing, so their wording was silently dropped and
+         *   the user always saw the generic sentence.
+         */
+        handleApiError(error, fallback = '') {
+            let message = fallback || 'ارتباط با سرور برقرار نشد.'
             if (error.response) {
                 const status = error.response.status
                 if (status === 422) {
                     const errors = error.response.data.errors
                     message = Object.values(errors).flat().join(' | ')
-                    message = `خطا در ورودی: ${message}`
+                    message = `ورودی درست نیست: ${message}`
                 } else if (status === 401 || status === 403) {
-                    message = 'شما مجوز لازم برای انجام این عملیات را ندارید.'
+                    message = 'اجازه انجام این کار را نداری.'
                 } else if (status === 404) {
-                    message = 'منبع مورد نظر یافت نشد.'
+                    message = 'مورد خواسته‌شده پیدا نشد.'
                 } else {
-                    message = error.response.data.message || `خطای سرور با کد ${status}`
+                    message = error.response.data.message || message || `خطای سرور (${status})`
                 }
             }
 

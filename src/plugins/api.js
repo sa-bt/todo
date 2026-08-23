@@ -175,10 +175,10 @@ export async function rejectAdminUser(id) {
 }
 
 /**
- * توکن همین دستگاه را روی سرور باطل می‌کند.
+ * Revokes this device's token on the server.
  *
- * عمداً از logout استور جداست: آن یکی از داخل رهگیر ۴۰۱ هم صدا زده می‌شود و
- * اگر درخواست شبکه می‌فرستاد، یک ۴۰۱ می‌توانست حلقه درست کند.
+ * Deliberately separate from the store's logout(): that one also runs from the
+ * 401 interceptor, so issuing a request there could turn one 401 into a loop.
  */
 export async function logoutRequest() {
   const response = await api.post('/logout')

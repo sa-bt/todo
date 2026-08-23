@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { applySeo } from '@/utils/seo'
+import { isAdminHost, isStandaloneApp } from '@/utils/appHost'
 
 /*
  * همه صفحه‌ها تنبل بارگذاری می‌شوند: هر مسیر فقط وقتی از شبکه گرفته می‌شود که
@@ -185,6 +186,22 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
+
+  // The admin PWA lives on its own origin. Even an old installation whose
+  // saved start URL points to a user route must reload the dedicated admin
+  // document. A client-side redirect is not enough because it would keep the
+  // user manifest from the document initially served at `/`.
+  if (isAdminHost() && !to.path.startsWith('/admin')) {
+    window.location.replace('/admin')
+    return next(false)
+  }
+
+  // Existing user installations may still have the old `/` start URL. Keep
+  // the public website unchanged in a normal browser, but open the installed
+  // user app on its authenticated workspace.
+  if (to.path === '/' && isStandaloneApp()) {
+    return next({ name: auth.isAuthenticated ? 'day' : 'login', replace: true })
+  }
 
   if (to.name === 'landing') {
     to.meta.locale = to.params.locale

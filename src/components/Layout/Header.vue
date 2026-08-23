@@ -35,6 +35,7 @@ const notificationsOpen = ref(false)
 
 const notifMenuRef = ref(null)
 const notifButtonRef = ref(null)
+const moreButtonRef = ref(null)
 
 let removeAfterEach = null
 
@@ -78,7 +79,7 @@ const navigationLinks = computed(() => {
 
     {
       to: { name: 'year' },
-      label: 'گزارشات',
+      label: 'گزارش‌ها',
       icon: BarChart3,
       routeName: 'year',
     },
@@ -101,6 +102,40 @@ const navigationLinks = computed(() => {
 
   return links
 })
+
+/*
+ * ناوبری پایین صفحه فقط روی تلفن همراه دیده می‌شود و عمداً کوتاه است.
+ *
+ * چهار مقصدی که کاربر واردشده بیشتر از همه بین‌شان جابه‌جا می‌شود اینجا می‌آیند
+ * و بقیه (ماه، اعلان‌ها، تنظیمات، بخش مدیریت) در همان کشوی موجود می‌مانند. مسیرها
+ * دست‌نخورده‌اند و هر گزینه یک پیوند واقعی است، پس پیوند مستقیم صفحه‌ها می‌ماند.
+ *
+ * برچسب‌ها اینجا کوتاه‌ترند: پنج ستون در عرض یک گوشی جا برای «نمای روزانه» ندارد.
+ * برچسب بلند در کشو و ناوبری نمایشگر بزرگ دست‌نخورده می‌ماند.
+ */
+const MOBILE_TAB_LABELS = {
+  day: 'امروز',
+  week: 'هفته',
+  goals: 'اهداف',
+  year: 'گزارش‌ها',
+}
+
+const mobileTabs = computed(() =>
+  navigationLinks.value
+    .filter((link) => link.routeName in MOBILE_TAB_LABELS)
+    .map((link) => ({ ...link, label: MOBILE_TAB_LABELS[link.routeName] })),
+)
+
+// کشو از دکمه «بیشتر» باز می‌شود؛ بعد از بستنش تمرکز باید به همان دکمه برگردد.
+function toggleMoreMenu() {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+
+  if (!mobileMenuOpen.value) {
+    nextTick(() => {
+      moreButtonRef.value?.focus?.()
+    })
+  }
+}
 
 function isLinkActive(routeName) {
   return route.name === routeName || route.matched.some((matchedRoute) => matchedRoute.name === routeName)
@@ -126,7 +161,8 @@ function toggleNotifications() {
 
 async function onClickNotification(notification) {
   if (!notification.read_at) {
-    await sysNotifs.markRead(notification.id)
+    // باز کردن اعلان خودش یعنی خواندنش؛ پیام جداگانه لازم ندارد.
+    await sysNotifs.markRead(notification.id, { silent: true })
   }
 
   notificationsOpen.value = false
@@ -216,8 +252,16 @@ function onKeydown(event) {
   }
 
   if (mobileMenuOpen.value) {
-    mobileMenuOpen.value = false
+    closeMobileMenu()
   }
+}
+
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
+
+  nextTick(() => {
+    moreButtonRef.value?.focus?.()
+  })
 }
 
 onMounted(() => {
@@ -261,7 +305,7 @@ onBeforeUnmount(() => {
         :to="{ name: 'goals' }"
         class="text-lg font-bold text-[var(--color-heading)]"
       >
-        داشبورد اهداف
+        کارها و اهداف
       </RouterLink>
     </div>
 
@@ -340,7 +384,7 @@ onBeforeUnmount(() => {
                   class="text-xs text-[var(--color-primary)] hover:underline focus:ring-2 focus:ring-[var(--color-primary)]/30 rounded px-1 py-0.5 focus:outline-none"
                   type="button"
                 >
-                  علامت‌گذاری همه خوانده شد
+                  خواندن همه
                 </button>
 
                 <button
@@ -362,14 +406,14 @@ onBeforeUnmount(() => {
                 v-if="notifLoading"
                 class="px-3 py-6 text-center text-xs text-[var(--color-text-secondary)]"
               >
-                در حال بارگذاری...
+                در حال بارگذاری…
               </div>
 
               <div
                 v-else-if="notifError"
                 class="px-3 py-6 text-center text-xs text-red-500"
               >
-                خطا در دریافت اعلان‌ها
+                دریافت اعلان‌ها ناموفق بود
               </div>
 
               <template v-else-if="notifications.length">
@@ -453,7 +497,7 @@ onBeforeUnmount(() => {
   </header>
 
   <nav
-    class="hidden md:flex gap-4 surface px-6 py-3 shadow-sm border-b border-token"
+    class="hidden md:flex flex-wrap gap-y-2 gap-x-4 surface px-6 py-3 shadow-sm border-b border-token"
     dir="rtl"
   >
     <RouterLink
@@ -488,7 +532,7 @@ onBeforeUnmount(() => {
     <div
       v-if="mobileMenuOpen"
       class="fixed inset-0 bg-black/40 z-20 md:hidden"
-      @click="mobileMenuOpen = false"
+      @click="closeMobileMenu"
       aria-hidden="true"
     />
   </transition>
@@ -507,7 +551,7 @@ onBeforeUnmount(() => {
         </h2>
 
         <button
-          @click="mobileMenuOpen = false"
+          @click="closeMobileMenu"
           class="rounded p-1 hover-surface-mute focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none tap-target"
           type="button"
           aria-label="بستن منو"
@@ -626,6 +670,64 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </transition>
+
+  <!--
+    ناوبری پایین صفحه، فقط تلفن همراه.
+
+    زیر همان نقطه شکستی پنهان می‌شود که ناوبری افقی بالای صفحه ظاهر می‌شود، پس
+    نمایشگر بزرگ هیچ تغییری نمی‌کند. لایه‌اش پایین‌تر از پرده کشو است تا وقتی کشو
+    باز است، این نوار هم زیر همان پرده تیره برود و دو ناوبری هم‌زمان فعال نباشند.
+  -->
+  <Teleport to="body">
+    <!-- محتوای انتهای صفحه نباید زیر نوار پنهان شود -->
+    <div class="mobile-nav-spacer" aria-hidden="true"></div>
+
+    <nav
+      class="mobile-nav"
+      dir="rtl"
+      aria-label="ناوبری سریع"
+    >
+      <RouterLink
+        v-for="tab in mobileTabs"
+        :key="String(tab.routeName)"
+        :to="tab.to"
+        class="mobile-nav-item"
+        :class="{ 'is-active': isLinkActive(tab.routeName) }"
+        :aria-current="isLinkActive(tab.routeName) ? 'page' : undefined"
+      >
+        <component :is="tab.icon" class="w-5 h-5" aria-hidden="true" />
+        <span>{{ tab.label }}</span>
+      </RouterLink>
+
+      <button
+        ref="moreButtonRef"
+        type="button"
+        class="mobile-nav-item"
+        :class="{ 'is-active': mobileMenuOpen }"
+        :aria-expanded="mobileMenuOpen ? 'true' : 'false'"
+        aria-controls="mobile-nav"
+        @click.stop="toggleMoreMenu"
+      >
+        <span class="mobile-nav-icon-wrap">
+          <Menu class="w-5 h-5" aria-hidden="true" />
+
+          <span
+            v-if="unreadCount > 0"
+            class="mobile-nav-badge badge-red-pulse-glow"
+            aria-live="polite"
+          >
+            {{ unreadCount }}
+          </span>
+        </span>
+
+        <span>بیشتر</span>
+
+        <span v-if="unreadCount > 0" class="sr-only">
+          {{ unreadCount }} اعلان خوانده‌نشده
+        </span>
+      </button>
+    </nav>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -676,15 +778,122 @@ onBeforeUnmount(() => {
   -webkit-line-clamp: 2;
 }
 
-.hover-surface-mute:hover {
-  background: color-mix(in oklab, var(--color-background) 85%, black 8%);
+
+/* ——— ناوبری پایین صفحه (تلفن همراه) ——— */
+
+/*
+ * ارتفاع نوار یک بار اینجا تعریف می‌شود و هم خود نوار و هم فاصله‌گیر انتهای صفحه
+ * از آن می‌خوانند، تا این دو هیچ‌وقت از هم جدا نیفتند. گوشی‌های دارای ناحیه امن
+ * پایین صفحه، به همان اندازه فضای اضافه می‌گیرند.
+ */
+.mobile-nav,
+.mobile-nav-spacer {
+  --mobile-nav-height: 60px;
 }
 
-.hover-surface-soft:hover {
-  background: var(--color-background-soft);
+.mobile-nav-spacer {
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
-.surface-mute {
-  background: color-mix(in oklab, var(--color-background) 85%, black 8%);
+.mobile-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  align-items: stretch;
+  background: var(--color-background);
+  border-top: 1px solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 6%);
+}
+
+.mobile-nav-item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  /* ناحیه لمس هر گزینه از حداقل چهل‌وچهار پیکسل کمتر نمی‌شود */
+  min-height: var(--mobile-nav-height);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  transition: color 0.15s ease;
+}
+
+.mobile-nav-item > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-nav-item.is-active {
+  color: var(--color-primary);
+}
+
+/*
+ * وضعیت فعال فقط با رنگ مشخص نمی‌شود: یک نوار کوتاه بالای گزینه هم می‌آید تا
+ * بدون تشخیص رنگ هم دیده شود.
+ */
+.mobile-nav-item.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--color-primary);
+}
+
+.mobile-nav-item:focus-visible {
+  outline-offset: -3px;
+}
+
+.mobile-nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.mobile-nav-badge {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+}
+
+/*
+ * پنهان‌شدن روی نمایشگر بزرگ عمداً اینجا و با پرس‌وجوی رسانه‌ای نوشته شده، نه با
+ * کلاس کمکی `md:hidden`.
+ *
+ * دو دلیل، که هر دو در مرورگر دیده شدند: قاعده‌های این فایل محدوده‌دار هستند و
+ * گزینشگرشان یک نشانه اضافه می‌گیرد، پس از آن کلاس کمکی تک‌بخشی قوی‌ترند و
+ * خنثی‌اش می‌کنند. و چون `display: flex` بالاتر اعلام شده، این قاعده باید بعد از
+ * آن بیاید تا در تساوی وزن، ترتیب به نفعش تمام شود.
+ *
+ * نقطه شکست همان نقطه‌ای است که ناوبری افقی بالای صفحه ظاهر می‌شود.
+ */
+@media (min-width: 768px) {
+  .mobile-nav,
+  .mobile-nav-spacer {
+    display: none;
+  }
 }
 </style>

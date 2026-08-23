@@ -54,6 +54,7 @@ const stateClass = computed(() =>
       :class="[ sizeClass, variantClass, stateClass, block ? 'w-full' : '' ]"
   >
     <Loader v-if="loading" class="h-5 w-5 animate-spin" />
-    <span :class="{ 'opacity-0': loading }"><slot /></span>
+    <!-- inline-flex so a leading icon inside the slot keeps its gap from the label -->
+    <span class="inline-flex items-center gap-2" :class="{ 'opacity-0': loading }"><slot /></span>
   </button>
 </template>

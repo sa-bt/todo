@@ -29,8 +29,8 @@ export const useAuthStore = defineStore("auth", () => {
         localStorage.setItem("token", payload.token);
     }
 
-    // پاک‌سازی محلی. رهگیر ۴۰۱ هم همین را صدا می‌زند، پس اینجا هیچ درخواست
-    // شبکه‌ای نباید باشد.
+    // Local clear only. The 401 interceptor calls this too, so it must never
+    // issue a network request.
     function logout() {
         userData.value = null;
         authToken.value = null;
@@ -39,17 +39,19 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     /**
-     * خروج واقعی: اول توکن روی سرور باطل می‌شود، بعد حافظهٔ محلی پاک.
+     * Real sign-out: revoke the token on the server, then clear local state.
      *
-     * پیش از این فقط localStorage پاک می‌شد و توکن تا ابد روی سرور معتبر
-     * می‌ماند؛ خروج فقط یک وانمود بود.
+     * Previously only localStorage was cleared, so the token stayed valid on the
+     * server forever and signing out was merely cosmetic.
+     *
+     * The import is dynamic because the api module imports this store.
      */
     async function signOut() {
         try {
             const { logoutRequest } = await import("@/plugins/api");
             await logoutRequest();
         } catch {
-            // اگر شبکه نبود یا توکن از قبل باطل شده بود، باز هم باید محلی پاک شود.
+            // Offline, or the token was already revoked: still clear locally.
         } finally {
             logout();
         }

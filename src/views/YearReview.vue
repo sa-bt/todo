@@ -11,11 +11,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import jalaali from 'jalaali-js'
 import {
-  Loader2, Share2, ArrowRight, Star, ListChecks, Flame, CalendarDays,
+  Share2, ArrowRight, Star, ListChecks, Flame, CalendarDays,
   TrendingUp, TrendingDown, Minus, Trophy, Sunrise, Activity,
 } from 'lucide-vue-next'
 import api from '@/plugins/axios'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
+import PageHeader from '@/components/UI/PageHeader.vue'
+import EmptyState from '@/components/UI/EmptyState.vue'
+import LoadingState from '@/components/UI/LoadingState.vue'
 import { toPersianNumber } from '@/utils/number'
 import { useActivityPaletteStore } from '@/stores/activityPalette'
 import { SHAMSI_MONTH_NAMES, WEEK_DAY_NAMES_LONG } from '@/utils/jalali'
@@ -159,14 +162,14 @@ const previousYearText = computed(() => {
   const tasks = toPersianNumber(previous.total_tasks)
 
   if (previous.tone === 'flat') {
-    return `بازدهی‌ات تقریباً مثل سال ${year} است. آن سال ${tasks} تسک داشتی.`
+    return `بازدهی‌ات تقریباً مثل سال ${year} است. آن سال ${tasks} کار داشتی.`
   }
 
   const gap = toPersianNumber(Math.abs(previous.diff))
 
   return previous.tone === 'up'
-    ? `نسبت به سال ${year} بازدهی‌ات ${gap} درصد بهتر شده. آن سال ${tasks} تسک داشتی.`
-    : `نسبت به سال ${year} بازدهی‌ات ${gap} درصد پایین‌تر است. آن سال ${tasks} تسک داشتی.`
+    ? `نسبت به سال ${year} بازدهی‌ات ${gap} درصد بهتر شده. آن سال ${tasks} کار داشتی.`
+    : `نسبت به سال ${year} بازدهی‌ات ${gap} درصد پایین‌تر است. آن سال ${tasks} کار داشتی.`
 })
 
 /* ===== کارت‌های برجسته ===== */
@@ -182,8 +185,8 @@ const highlights = computed(() => {
       key: 'tasks',
       icon: ListChecks,
       value: toPersianNumber(stats.total_tasks),
-      label: 'تسک ثبت‌شده',
-      note: `${toPersianNumber(stats.done_tasks)} تسک انجام شد`,
+      label: 'کار ثبت‌شده',
+      note: `${toPersianNumber(stats.done_tasks)} کار انجام شد`,
     },
     {
       key: 'percent',
@@ -197,7 +200,7 @@ const highlights = computed(() => {
       icon: Star,
       value: toPersianNumber(stats.perfect_days),
       label: 'روز طلایی',
-      note: 'روزی که هیچ تسکی جا نماند',
+      note: 'روزی که هیچ کاری جا نماند',
     },
     {
       key: 'streak',
@@ -226,7 +229,7 @@ const highlights = computed(() => {
       icon: CalendarDays,
       value: formatDay(busiest.day),
       label: 'پرکارترین روز',
-      note: `${toPersianNumber(busiest.done)} از ${toPersianNumber(busiest.total)} تسک`,
+      note: `${toPersianNumber(busiest.done)} از ${toPersianNumber(busiest.total)} کار`,
     })
   }
 
@@ -246,7 +249,7 @@ const highlights = computed(() => {
       icon: Trophy,
       value: busiestMonth.value.name,
       label: 'پرکارترین ماه',
-      note: `${toPersianNumber(busiestMonth.value.total)} تسک`,
+      note: `${toPersianNumber(busiestMonth.value.total)} کار`,
     })
   }
 
@@ -269,7 +272,7 @@ const shareText = computed(() => {
   const stats = summary.value
   const lines = [
     `کارت سال ${toPersianNumber(selectedYear.value)} من`,
-    `${toPersianNumber(stats.total_tasks)} تسک، ${toPersianNumber(stats.done_tasks)} انجام‌شده، ${percentLabel(stats.average_percent)} بازدهی`,
+    `${toPersianNumber(stats.total_tasks)} کار، ${toPersianNumber(stats.done_tasks)} انجام‌شده، ${percentLabel(stats.average_percent)} بازدهی`,
     `${toPersianNumber(stats.perfect_days)} روز طلایی و بلندترین زنجیره ${toPersianNumber(review.value.streak.length)} روز`,
   ]
 
@@ -338,13 +341,13 @@ onMounted(() => fetchReview(selectedYear.value))
 
 <template>
   <div class="review-page">
-    <div class="review-head">
-      <RouterLink :to="{ name: 'year' }" class="back-link">
-        <ArrowRight class="w-4 h-4"/>
-        بازگشت به گزارش
-      </RouterLink>
+    <RouterLink :to="{ name: 'year' }" class="back-link">
+      <ArrowRight class="w-4 h-4"/>
+      بازگشت به گزارش‌ها
+    </RouterLink>
 
-      <div class="head-controls">
+    <PageHeader title="کارت سال" subtitle="جمع‌بندی یک سال در یک صفحه.">
+      <template #actions>
         <BaseSelect
           v-model="selectedYear"
           name="review-year"
@@ -362,22 +365,29 @@ onMounted(() => fetchReview(selectedYear.value))
           <Share2 class="w-4 h-4"/>
           اشتراک‌گذاری
         </button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <p v-if="shareState === 'copied'" class="share-note">متن کارت در حافظه کپی شد.</p>
     <p v-else-if="shareState === 'failed'" class="share-note is-error">کپی متن کارت ممکن نشد.</p>
 
-    <div v-if="isLoading" class="loading-center">
-      <Loader2 class="w-8 h-8 animate-spin text-primary"/>
-    </div>
+    <LoadingState v-if="isLoading" title="در حال بارگذاری کارت سال…" />
 
-    <div v-else-if="loadError" class="empty-box">{{ loadError }}</div>
+    <EmptyState
+      v-else-if="loadError"
+      variant="error"
+      :title="loadError"
+      description="اتصال اینترنت را بررسی کن و دوباره تلاش کن."
+      action-label="تلاش دوباره"
+      @action="fetchReview(selectedYear)"
+    />
 
-    <div v-else-if="!hasData" class="empty-box">
-      <b>برای سال {{ toPersianNumber(selectedYear) }} هنوز داده‌ای نیست.</b>
-      <span>وقتی تسک‌های این سال ثبت شوند، کارت سال ساخته می‌شود.</span>
-    </div>
+    <EmptyState
+      v-else-if="!hasData"
+      variant="empty"
+      :title="`برای سال ${toPersianNumber(selectedYear)} هنوز داده‌ای نیست`"
+      description="وقتی کارهای این سال ثبت شوند، کارت سال ساخته می‌شود."
+    />
 
     <template v-else>
       <!-- سرکارت -->
@@ -386,8 +396,8 @@ onMounted(() => fetchReview(selectedYear.value))
         <b class="hero-year">{{ toPersianNumber(selectedYear) }}</b>
         <span class="hero-percent">{{ percentLabel(summary.average_percent) }} بازدهی</span>
         <span class="hero-note">
-          {{ toPersianNumber(summary.done_tasks) }} تسک از
-          {{ toPersianNumber(summary.total_tasks) }} تسک
+          {{ toPersianNumber(summary.done_tasks) }} کار از
+          {{ toPersianNumber(summary.total_tasks) }} کار
           <template v-if="isCurrentYear">— این سال هنوز تمام نشده است</template>
         </span>
       </section>
@@ -438,7 +448,7 @@ onMounted(() => fetchReview(selectedYear.value))
       <section v-if="topGoals.length" class="panel">
         <div class="panel-head">
           <b>اهداف برتر سال</b>
-          <small>ترتیب از بیشترین بازدهی. هدفی که در این سال تسکی نداشته نمی‌آید.</small>
+          <small>ترتیب از بیشترین بازدهی. هدفی که در این سال کاری نداشته نمی‌آید.</small>
         </div>
 
         <div class="goal-list">
@@ -473,24 +483,21 @@ onMounted(() => fetchReview(selectedYear.value))
 </template>
 
 <style scoped>
+/* Same content width and padding as the shared `.page` class. */
 .review-page {
-  background-color: var(--color-background);
-  min-height: 100vh;
-  padding: 1.5rem;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 1rem;
   direction: rtl;
   color: var(--color-text);
 }
 
-.review-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
+@media (min-width: 640px) {
+  .review-page { padding: 1.5rem; }
 }
 
 .back-link {
+  margin-bottom: 0.75rem;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -501,7 +508,7 @@ onMounted(() => fetchReview(selectedYear.value))
 }
 .back-link:hover { color: var(--color-primary); }
 
-.head-controls { display: flex; align-items: center; gap: 0.75rem; }
+
 .year-sel { min-width: 120px; }
 
 .share-btn {
@@ -521,22 +528,7 @@ onMounted(() => fetchReview(selectedYear.value))
 .share-btn:hover { background: color-mix(in srgb, var(--color-primary) 18%, transparent); }
 
 .share-note { font-size: 11px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 0.75rem; }
-.share-note.is-error { color: #DC2626; }
-
-.loading-center { display: flex; align-items: center; justify-content: center; padding: 4rem 0; }
-
-.empty-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 2.5rem 1.25rem;
-  border-radius: 18px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-}
+.share-note.is-error { color: var(--color-danger); }
 
 /* سرکارت */
 .hero {
@@ -545,7 +537,7 @@ onMounted(() => fetchReview(selectedYear.value))
   align-items: center;
   gap: 6px;
   padding: 2rem 1.25rem;
-  border-radius: 22px;
+  border-radius: 16px;
   text-align: center;
   margin-bottom: 1rem;
   border: 1px solid var(--color-border);
@@ -572,8 +564,8 @@ onMounted(() => fetchReview(selectedYear.value))
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
 }
-.compare-line.is-up { color: #059669; }
-.compare-line.is-down { color: #DC2626; }
+.compare-line.is-up { color: var(--color-success); }
+.compare-line.is-down { color: var(--color-danger); }
 .compare-line.is-flat { color: var(--color-text-secondary); }
 
 /* کارت‌های برجسته */
@@ -589,7 +581,7 @@ onMounted(() => fetchReview(selectedYear.value))
   flex-direction: column;
   gap: 4px;
   padding: 1rem;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
 }
@@ -611,7 +603,7 @@ onMounted(() => fetchReview(selectedYear.value))
 /* پنل‌ها */
 .panel {
   padding: 1.1rem;
-  border-radius: 20px;
+  border-radius: 16px;
   margin-bottom: 1.25rem;
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);

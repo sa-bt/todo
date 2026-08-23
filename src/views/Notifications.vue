@@ -12,6 +12,10 @@ import {
 } from 'lucide-vue-next'
 import { useSystemNotificationsStore } from '@/stores/systemNotifications'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
+import PageHeader from '@/components/UI/PageHeader.vue'
+import EmptyState from '@/components/UI/EmptyState.vue'
+import LoadingState from '@/components/UI/LoadingState.vue'
+import ConfirmDialog from '@/components/UI/ConfirmDialog.vue'
 const store = useSystemNotificationsStore()
 const router = useRouter()
 
@@ -80,7 +84,8 @@ async function markRead(n) {
 
 async function readAndOpen(n) {
   if (!n.read_at) {
-    await store.markRead(n.id)
+    // باز کردن اعلان خودش یعنی خواندنش؛ پیام جداگانه لازم ندارد.
+    await store.markRead(n.id, { silent: true })
   }
 
   open(n)
@@ -194,37 +199,34 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="surface p-4 md:p-6 rounded-xl border border-token shadow-sm text-right">
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-      <h1 class="text-xl md:text-2xl font-extrabold text-[var(--color-heading)] flex items-center gap-2">
-        <Bell class="w-6 h-6 text-[var(--color-secondary)]" />
-        اعلان‌ها
-      </h1>
-
-      <!-- اکشن‌های گروهی -->
-      <div class="flex items-center gap-2">
+  <section class="page text-right">
+    <PageHeader title="اعلان‌ها" :icon="Bell">
+      <template #actions>
+        <!-- اکشن‌های گروهی -->
         <button
+          type="button"
           @click="markAllRead"
-          class="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-token surface-soft hover-surface-mute text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          class="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-token surface-soft hover-surface-mute text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="store.unreadCount === 0 || store.loading"
         >
-          <CheckCheck class="w-4 h-4" />
-          علامت‌گذاری همه خوانده شد
+          <CheckCheck class="w-4 h-4" aria-hidden="true" />
+          خواندن همه
         </button>
 
         <button
+          type="button"
           @click="confirmRemoveAll"
-          class="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200/40 bg-red-50 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          class="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-token surface-soft text-sm font-semibold text-[var(--color-danger)] hover-surface-mute disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="!store.items.length || store.loading"
         >
-          <Trash2 class="w-4 h-4" />
+          <Trash2 class="w-4 h-4" aria-hidden="true" />
           حذف همه
         </button>
-      </div>
-    </header>
+      </template>
+    </PageHeader>
 
     <!-- فیلترها + جستجو -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 items-end">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
       <BaseSelect
         v-model="statusFilter"
         name="notification-status-filter"
@@ -247,43 +249,38 @@ onBeforeUnmount(() => {
             v-model="q"
             type="text"
             class="input h-[42px] pr-3 pl-9"
-            placeholder="جستجو در عنوان/متن اعلان..."
+            placeholder="جستجو در عنوان یا متن اعلان"
           />
         </div>
       </div>
     </div>
     <!-- بدنه -->
-    <div class="rounded-xl border border-token overflow-hidden">
-      <div
-        v-if="store.loading"
-        class="flex items-center justify-center gap-2 py-8 text-[var(--color-text-secondary)]"
-      >
-        <Loader2 class="w-5 h-5 animate-spin" />
-        در حال بارگذاری...
-      </div>
+    <LoadingState v-if="store.loading" title="در حال بارگذاری اعلان‌ها…" />
 
-      <div
-        v-else-if="store.error"
-        class="px-4 py-6 text-center text-sm text-red-500"
-      >
-        خطا در دریافت اعلان‌ها
-      </div>
+    <EmptyState
+      v-else-if="store.error"
+      variant="error"
+      title="دریافت اعلان‌ها ناموفق بود"
+      description="اتصال اینترنت را بررسی کن و دوباره تلاش کن."
+      action-label="تلاش دوباره"
+      @action="store.loadFirstPage()"
+    />
 
-      <template v-else>
-        <div
-          v-if="filtered.length === 0"
-          class="px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]"
-        >
-          هیچ اعلان مطابقی یافت نشد.
-        </div>
+    <EmptyState
+      v-else-if="filtered.length === 0"
+      variant="filter"
+      title="اعلانی با این فیلترها پیدا نشد"
+      description="وضعیت و متن جستجو را بررسی کن."
+    />
 
-        <ul v-else class="divide-y divide-token">
+    <div v-else class="rounded-2xl border border-token overflow-hidden">
+        <ul class="divide-y divide-token">
           <li
             v-for="n in filtered"
             :key="n.id"
             class="px-4 py-3 surface hover-surface-mute transition"
             :class="{ 'cursor-pointer': n.url }"
-            @click="open(n)"
+            @click="readAndOpen(n)"
           >
             <div class="flex items-start gap-3">
               <img
@@ -315,7 +312,7 @@ onBeforeUnmount(() => {
                     class="chip"
                     :class="n.read_at ? 'chip-muted' : 'chip-accent'"
                   >
-                    {{ n.read_at ? 'خوانده شده' : 'نخوانده' }}
+                    {{ n.read_at ? 'خوانده‌شده' : 'نخوانده' }}
                   </span>
                 </div>
 
@@ -335,14 +332,14 @@ onBeforeUnmount(() => {
                     class="btn-ghost-primary inline-flex items-center gap-1.5"
                   >
                     <CheckCircle2 class="w-4 h-4" />
-                    علامت‌گذاری به عنوان خوانده‌شده
+                    خوانده شد
                   </button>
 
                   <button
                     @click.stop="confirmRemove(n)"
-                    class="icon-btn danger"
-                    aria-label="حذف"
-                    title="حذف"
+                    class="icon-btn danger tap-target"
+                    aria-label="حذف اعلان"
+                    title="حذف اعلان"
                   >
                     <Trash2 class="w-4 h-4" />
                   </button>
@@ -357,7 +354,8 @@ onBeforeUnmount(() => {
 
                 <CheckCircle2
                   v-else
-                  class="w-3.5 h-3.5 text-green-500"
+                  class="w-3.5 h-3.5"
+                  :style="{ color: 'var(--color-success)' }"
                 />
               </div>
             </div>
@@ -374,62 +372,32 @@ onBeforeUnmount(() => {
             class="inline-flex items-center justify-center gap-2 text-sm text-[var(--color-text-secondary)]"
           >
             <Loader2 class="w-4 h-4 animate-spin" />
-            در حال دریافت اعلان‌های بیشتر...
+            در حال دریافت اعلان‌های بیشتر…
           </div>
 
           <div
             v-else-if="!store.nextPageUrl && store.items.length"
             class="text-xs text-[var(--color-text-secondary)]"
           >
-            همه اعلان‌ها نمایش داده شد.
+            همه اعلان‌ها نمایش داده شدند.
           </div>
         </div>
-      </template>
     </div>
   </section>
 
   <!-- مدال حذف -->
-  <transition name="fade">
-    <div
-      v-if="showConfirm"
-      class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-      role="dialog"
-      aria-modal="true"
-      @click.self="cancelRemove"
-    >
-      <div class="surface border border-token rounded-xl shadow-xl w-[90%] max-w-sm p-6 text-center">
-        <h2 class="text-lg font-bold text-[var(--color-heading)] mb-3">
-          {{ confirmMode === 'all' ? 'حذف تمام اعلان‌ها' : 'حذف اعلان' }}
-        </h2>
-
-        <p class="text-sm text-[var(--color-text-secondary)] mb-6">
-          {{
-            confirmMode === 'all'
-              ? 'آیا از حذف همهٔ اعلان‌ها مطمئن هستید؟'
-              : 'آیا از حذف این اعلان مطمئن هستید؟'
-          }}
-        </p>
-
-        <div class="flex justify-center gap-3">
-          <button
-            @click="doRemove"
-            :disabled="removing"
-            class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold shadow focus:ring-2 focus:ring-red-500/30 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {{ removing ? 'در حال حذف...' : 'بله، حذف شود' }}
-          </button>
-
-          <button
-            @click="cancelRemove"
-            :disabled="removing"
-            class="px-4 py-2 rounded-lg border border-token surface-soft hover-surface-mute text-sm font-semibold focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            انصراف
-          </button>
-        </div>
-      </div>
-    </div>
-  </transition>
+  <ConfirmDialog
+    :open="showConfirm"
+    :title="confirmMode === 'all' ? 'حذف همه اعلان‌ها' : 'حذف اعلان'"
+    :message="confirmMode === 'all'
+      ? 'همه اعلان‌ها، از جمله اعلان‌های خوانده‌نشده، برای همیشه حذف می‌شوند. این کار قابل بازگشت نیست.'
+      : 'این اعلان حذف شود؟ این کار قابل بازگشت نیست.'"
+    :confirm-label="confirmMode === 'all' ? 'حذف همه اعلان‌ها' : 'حذف اعلان'"
+    variant="danger"
+    :loading="removing"
+    @cancel="cancelRemove"
+    @confirm="doRemove"
+  />
 </template>
 
 <style scoped>
@@ -447,15 +415,6 @@ onBeforeUnmount(() => {
 .input:focus {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 25%, transparent);
   border-color: var(--color-primary);
-}
-
-.select {
-  padding: .5rem .75rem;
-  border-radius: .75rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-text);
-  outline: none;
 }
 
 .chip {
@@ -508,24 +467,8 @@ onBeforeUnmount(() => {
 }
 
 .icon-btn.danger {
-  border-color: color-mix(in oklab, red 35%, var(--color-border));
-  color: #ef4444;
-}
-
-.surface {
-  background: var(--color-background);
-}
-
-.surface-soft {
-  background: var(--color-background-soft);
-}
-
-.hover-surface-mute:hover {
-  background: color-mix(in oklab, var(--color-background) 85%, black 8%);
-}
-
-.border-token {
-  border-color: var(--color-border);
+  border-color: color-mix(in oklab, var(--color-danger) 35%, var(--color-border));
+  color: var(--color-danger);
 }
 
 [dir="rtl"] .truncate {

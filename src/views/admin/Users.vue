@@ -1,5 +1,26 @@
 <template>
   <section class="space-y-5" dir="rtl">
+    <!-- Standing call to action: the approval queue is why this screen exists -->
+    <button
+      v-if="pendingStore.count > 0 && filters.status !== 'pending'"
+      type="button"
+      class="flex w-full items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-right transition hover:bg-amber-500/15"
+      @click="showPendingOnly"
+    >
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+        <Clock class="h-5 w-5 text-amber-600" aria-hidden="true" />
+      </span>
+      <span class="flex-1">
+        <strong class="block text-sm font-bold text-amber-700">
+          {{ faNumber(pendingStore.count) }} حساب در انتظار تأیید شماست
+        </strong>
+        <span class="text-xs text-amber-600/80">
+          تا زمانی که تأیید نکنید، این افراد نمی‌توانند وارد شوند.
+        </span>
+      </span>
+      <ChevronLeft class="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+    </button>
+
     <div
       class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-5 shadow-sm"
     >
@@ -35,19 +56,14 @@
           <option value="approved">تأییدشده</option>
           <option value="rejected">ردشده</option>
         </select>
-        <button
-          type="button"
-          class="min-h-11 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white"
-          @click="loadUsers"
-        >
-          جست‌وجو
-        </button>
+        <BaseButton :loading="loading" @click="loadUsers">جست‌وجو</BaseButton>
       </div>
     </div>
 
     <p
       v-if="errorMessage"
       class="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-600"
+      role="alert"
     >
       {{ errorMessage }}
     </p>
@@ -55,17 +71,26 @@
     <div
       class="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] shadow-sm"
     >
-      <div v-if="loading" class="p-12 text-center text-sm text-[var(--color-text-secondary)]">
-        در حال دریافت کاربران...
+      <div v-if="loading" class="p-12 text-center">
+        <LoaderCircle
+          class="mx-auto h-7 w-7 animate-spin text-[var(--color-text-secondary)]"
+          aria-hidden="true"
+        />
+        <p class="mt-3 text-sm text-[var(--color-text-secondary)]">در حال دریافت کاربران...</p>
       </div>
-      <div
-        v-else-if="!users.length"
-        class="p-12 text-center text-sm text-[var(--color-text-secondary)]"
-      >
-        کاربری مطابق صافی‌ها پیدا نشد.
+
+      <div v-else-if="!users.length" class="p-12 text-center">
+        <span
+          class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-background-soft)]"
+        >
+          <component :is="emptyState.icon" class="h-7 w-7 text-[var(--color-text-secondary)]" aria-hidden="true" />
+        </span>
+        <p class="font-bold text-[var(--color-heading)]">{{ emptyState.title }}</p>
+        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ emptyState.hint }}</p>
       </div>
+
       <div v-else class="overflow-x-auto">
-        <table class="w-full min-w-[760px] text-right text-sm">
+        <table class="w-full min-w-[860px] text-right text-sm">
           <thead
             class="bg-[var(--color-background-soft)] text-xs text-[var(--color-text-secondary)]"
           >
@@ -83,13 +108,14 @@
             <tr
               v-for="user in users"
               :key="user.id"
-              class="hover:bg-[var(--color-background-soft)]"
+              class="transition hover:bg-[var(--color-background-soft)]"
+              :class="isPending(user) ? 'bg-amber-500/[0.04]' : ''"
             >
               <td class="p-4">
-                <strong class="block text-[var(--color-heading)]">{{ user.name }}</strong
-                ><span class="text-xs text-[var(--color-text-secondary)]" dir="ltr">{{
-                  user.email
-                }}</span>
+                <strong class="block text-[var(--color-heading)]">{{ user.name }}</strong>
+                <span class="text-xs text-[var(--color-text-secondary)]" dir="ltr">
+                  {{ user.email }}
+                </span>
               </td>
               <td class="p-4">
                 <span
@@ -115,33 +141,42 @@
                 {{ formatDate(user.created_at) }}
               </td>
               <td class="p-4">
-                <div class="flex flex-wrap gap-2">
-                  <button
+                <!-- Weight matches importance: approving is the job, role is upkeep -->
+                <div class="flex items-center gap-2">
+                  <BaseButton
                     v-if="!isApproved(user)"
-                    type="button"
-                    class="min-h-9 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white disabled:opacity-60"
+                    size="sm"
+                    variant="primary"
+                    :loading="isBusy(user, 'approve')"
                     :disabled="savingId === user.id"
-                    @click="decide(user, 'approve')"
+                    @click="ask(user, 'approve')"
                   >
                     تأیید و اجازهٔ ورود
-                  </button>
-                  <button
+                  </BaseButton>
+
+                  <BaseButton
                     v-if="!isRejected(user) && user.role !== 'admin'"
-                    type="button"
-                    class="min-h-9 rounded-lg border border-rose-500/40 px-3 text-xs font-bold text-rose-600 disabled:opacity-60"
+                    size="sm"
+                    variant="ghost"
+                    class="!text-red-600"
+                    :loading="isBusy(user, 'reject')"
                     :disabled="savingId === user.id"
-                    @click="decide(user, 'reject')"
+                    @click="ask(user, 'reject')"
                   >
                     رد
-                  </button>
-                  <button
-                    type="button"
-                    class="min-h-9 rounded-lg border border-[var(--color-border)] px-3 text-xs font-bold"
+                  </BaseButton>
+
+                  <span class="mx-1 h-5 w-px bg-[var(--color-border)]" aria-hidden="true"></span>
+
+                  <BaseButton
+                    size="sm"
+                    variant="ghost"
+                    :loading="isBusy(user, 'role')"
                     :disabled="savingId === user.id"
-                    @click="toggleRole(user)"
+                    @click="ask(user, 'role')"
                   >
                     {{ user.role === 'admin' ? 'تبدیل به کاربر' : 'ارتقا به مدیر' }}
-                  </button>
+                  </BaseButton>
                 </div>
               </td>
             </tr>
@@ -149,13 +184,28 @@
         </table>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="Boolean(confirming)"
+      :title="confirmCopy.title"
+      :message="confirmCopy.message"
+      :confirm-label="confirmCopy.confirmLabel"
+      :variant="confirmCopy.variant"
+      :loading="Boolean(savingId)"
+      @confirm="runDecision"
+      @cancel="confirming = null"
+    />
   </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search } from 'lucide-vue-next'
+import { ChevronLeft, Clock, LoaderCircle, Search, UserX, Users as UsersIcon } from 'lucide-vue-next'
+import BaseButton from '@/components/UI/BaseButton.vue'
+import ConfirmDialog from '@/components/UI/ConfirmDialog.vue'
+import { useNotificationStore } from '@/stores/notification'
+import { useAdminPendingUsersStore } from '@/stores/adminPendingUsers'
 import {
   approveAdminUser,
   getAdminUsers,
@@ -164,31 +214,28 @@ import {
 } from '@/plugins/api'
 
 const route = useRoute()
+const notifications = useNotificationStore()
+const pendingStore = useAdminPendingUsersStore()
+
 const users = ref([])
 const loading = ref(false)
 const savingId = ref(null)
+// The row/action pair awaiting confirmation, e.g. { user, action: 'approve' }.
+const confirming = ref(null)
 const errorMessage = ref('')
-// اعلان «کاربر جدید» مستقیم به ?status=pending می‌آید، پس صافی از نشانی خوانده می‌شود.
+// The "new user" notification links straight to ?status=pending.
 const filters = reactive({ search: '', role: '', status: '' })
+
 const faNumber = (value) => Number(value || 0).toLocaleString('fa-IR')
 const formatDate = (value) =>
   value ? new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(value)) : '—'
 
-async function loadUsers() {
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const response = await getAdminUsers(filters)
-    users.value = response?.data?.data ?? response?.data ?? []
-  } catch (error) {
-    errorMessage.value = error?.response?.data?.message || 'دریافت کاربران ناموفق بود.'
-  } finally {
-    loading.value = false
-  }
-}
-
 const isApproved = (user) => Boolean(user.approved_at) && !user.rejected_at
 const isRejected = (user) => Boolean(user.rejected_at)
+const isPending = (user) => !user.approved_at && !user.rejected_at
+
+const isBusy = (user, action) =>
+  savingId.value === user.id && confirming.value?.action === action
 
 function statusBadge(user) {
   if (isRejected(user)) {
@@ -203,42 +250,113 @@ function statusBadge(user) {
   return { label: 'در انتظار تأیید', class: 'bg-amber-500/10 text-amber-600' }
 }
 
-async function decide(user, action) {
-  const isApproving = action === 'approve'
-  const confirmText = isApproving
-    ? `به ${user.name} اجازهٔ ورود داده شود؟`
-    : `درخواست ${user.name} رد شود؟ توکن‌های فعالش هم باطل می‌شود.`
+const emptyState = computed(() => {
+  if (filters.status === 'pending') {
+    return {
+      icon: UsersIcon,
+      title: 'صف انتظار خالی است',
+      hint: 'همهٔ درخواست‌ها بررسی شده‌اند. کاربر تازه که بیاید، اینجا و با اعلان خبردار می‌شوید.',
+    }
+  }
+  return {
+    icon: UserX,
+    title: 'کاربری پیدا نشد',
+    hint: 'صافی‌ها را تغییر دهید یا عبارت جست‌وجو را کوتاه‌تر کنید.',
+  }
+})
 
-  if (!window.confirm(confirmText)) return
+const confirmCopy = computed(() => {
+  const target = confirming.value
+  if (!target) return { title: '', message: '', confirmLabel: 'تأیید', variant: 'primary' }
 
-  savingId.value = user.id
+  const name = target.user.name
+
+  if (target.action === 'approve') {
+    return {
+      title: 'اجازهٔ ورود داده شود؟',
+      message: `${name} پس از این می‌تواند وارد حساب خود شود و با ایمیل هم خبردار می‌شود.`,
+      confirmLabel: 'بله، تأیید کن',
+      variant: 'primary',
+    }
+  }
+
+  if (target.action === 'reject') {
+    return {
+      title: 'درخواست رد شود؟',
+      message: `${name} دیگر نمی‌تواند وارد شود و نشست‌های فعالش هم بسته می‌شود.`,
+      confirmLabel: 'بله، رد کن',
+      variant: 'danger',
+    }
+  }
+
+  const toAdmin = target.user.role !== 'admin'
+  return {
+    title: toAdmin ? 'ارتقا به مدیر؟' : 'تبدیل به کاربر عادی؟',
+    message: toAdmin
+      ? `${name} به همهٔ بخش‌های پنل مدیریت دسترسی پیدا می‌کند.`
+      : `دسترسی ${name} به پنل مدیریت گرفته می‌شود.`,
+    confirmLabel: toAdmin ? 'بله، ارتقا بده' : 'بله، تغییر بده',
+    variant: toAdmin ? 'primary' : 'danger',
+  }
+})
+
+function cleanFilters() {
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''))
+}
+
+async function loadUsers() {
+  loading.value = true
   errorMessage.value = ''
   try {
-    const response = isApproving
-      ? await approveAdminUser(user.id)
-      : await rejectAdminUser(user.id)
-
-    // پاسخ، ردیف تازه‌شده را برمی‌گرداند؛ همان را می‌نشانیم تا وضعیت جدول
-    // با سرور یکی بماند.
-    Object.assign(user, response?.data ?? {})
+    const response = await getAdminUsers(cleanFilters())
+    users.value = response?.data?.data ?? response?.data ?? []
   } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.message ||
-      (isApproving ? 'تأیید کاربر انجام نشد.' : 'رد کردن کاربر انجام نشد.')
+    errorMessage.value = error?.response?.data?.message || 'دریافت کاربران ناموفق بود.'
   } finally {
-    savingId.value = null
+    loading.value = false
   }
 }
 
-async function toggleRole(user) {
+function showPendingOnly() {
+  filters.status = 'pending'
+  loadUsers()
+}
+
+function ask(user, action) {
+  confirming.value = { user, action }
+}
+
+async function runDecision() {
+  const target = confirming.value
+  if (!target) return
+
+  const { user, action } = target
   savingId.value = user.id
   errorMessage.value = ''
+
   try {
-    const role = user.role === 'admin' ? 'user' : 'admin'
-    await updateAdminUserRole(user.id, role)
-    user.role = role
+    if (action === 'role') {
+      const role = user.role === 'admin' ? 'user' : 'admin'
+      await updateAdminUserRole(user.id, role)
+      user.role = role
+      notifications.setNotification({ message: 'نقش کاربر به‌روزرسانی شد.' })
+    } else {
+      const response =
+        action === 'approve' ? await approveAdminUser(user.id) : await rejectAdminUser(user.id)
+
+      // The response carries the refreshed row; adopt it so the table and the
+      // server agree on the new state.
+      Object.assign(user, response?.data ?? {})
+      notifications.setNotification({
+        message: response?.message || (action === 'approve' ? 'کاربر تأیید شد.' : 'درخواست رد شد.'),
+      })
+      await pendingStore.refresh()
+    }
+
+    confirming.value = null
   } catch (error) {
-    errorMessage.value = error?.response?.data?.message || 'تغییر نقش کاربر انجام نشد.'
+    confirming.value = null
+    notifications.handleApiError(error)
   } finally {
     savingId.value = null
   }
@@ -250,5 +368,6 @@ onMounted(() => {
     filters.status = status
   }
   loadUsers()
+  pendingStore.refresh()
 })
 </script>

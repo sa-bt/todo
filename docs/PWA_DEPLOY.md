@@ -10,10 +10,11 @@
 | `public/sw.js` | سرویس‌ورکر: precache، استراتژی fetch، push، پیام‌های `SKIP_WAITING` و `HARD_RESET` |
 | `src/utils/swUpdate.js` | ثبت سرویس‌ورکر، بررسی دوره‌ای نسخه‌ی جدید، فعال‌سازی، پاکسازی کامل |
 | `src/components/UI/UpdateUiVersion.vue` | مودالِ «نسخه جدید آماده است» (در `App.vue` mount شده) |
-| `public/manifest.webmanifest` | منبع یگانه‌ی manifest اپ کاربر (`id: "/"`) |
+| `public/manifest.webmanifest` | منبع یگانه‌ی manifest اپ کاربر (`start_url: "/app/day"`) |
 | `public/admin-manifest.webmanifest` | منبع یگانه‌ی manifest پنل مدیریت (`id: "/admin/"`) |
 | `index.html` / `admin.html` | سند ورودی مستقل هر اپ؛ لینک manifest در آن‌ها **ثابت** است |
 | `deploy/nginx/todo-front.conf` | هدرهای کش سرور؛ بخشی از منطق به‌روزرسانی است، نه یک تنظیم اختیاری |
+| `deploy/nginx/todo-admin.conf` | ورودی مستقل زیر‌دامنه مدیر که همیشه `admin.html` را سرو می‌کند |
 
 ## قواعدی که نباید شکسته شوند
 
@@ -29,8 +30,29 @@
    `dist/manifest.webmanifest` را با نسخه‌ی خودش بازنویسی می‌کند و یک تگ manifest
    تکراری هم به HTML تزریق می‌کند؛ نتیجه‌اش این است که ویرایش فایل‌های `public/`
    هیچ اثری در تولید ندارد.
-5. **`id` و `start_url` منیفست‌ها را تغییر نده.** تغییرشان یعنی اپ نصب‌شده به‌روز
-   نمی‌شود، بلکه یک اپ دوم کنار آن ساخته می‌شود.
+5. **`id` منیفست‌ها را تغییر نده.** تغییر آن یعنی مرورگر ممکن است یک اپ دوم کنار
+   نسخه نصب‌شده بسازد. نشانی شروع اپ کاربر باید `/app/day` و پنل مدیر باید `/admin`
+   بماند تا آیکن‌ها مستقیماً فضای درست خودشان را باز کنند.
+
+## قرارداد دو زیر‌دامنه
+
+- دامنه کاربر باید درخواست‌های برنامه را به `index.html` برگرداند.
+- زیر‌دامنه مدیر باید حتی برای مسیر `/`، سند `admin.html` را برگرداند.
+- روی زیر‌دامنه مدیر نباید `index index.html` باعث شود درخواست `/` فایل ورودی
+  برنامه کاربر را دریافت کند.
+- فایل `sw.js` و فایل‌های HTML در هر دو زیر‌دامنه باید با `no-store` سرو شوند.
+
+نمونه بخش تعیین‌کننده برای زیر‌دامنه مدیر:
+
+```nginx
+location = / {
+    try_files /admin.html =404;
+}
+
+location / {
+    try_files $uri /admin.html;
+}
+```
 
 ## مراحل استقرار
 
@@ -47,9 +69,11 @@ rsync -av --delete dist/ user@server:/var/www/todo-front/
 
 ```bash
 cp deploy/nginx/todo-front.conf /etc/nginx/sites-available/todo-front.conf
+cp deploy/nginx/todo-admin.conf /etc/nginx/sites-available/todo-admin.conf
 cp deploy/nginx/todo-api.conf   /etc/nginx/sites-available/todo-api.conf
 # در هر دو فایل، server_name و root را ویرایش کن
 ln -s /etc/nginx/sites-available/todo-front.conf /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/todo-admin.conf /etc/nginx/sites-enabled/
 ln -s /etc/nginx/sites-available/todo-api.conf   /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 certbot --nginx -d example.com -d api.example.com   # سرویس‌ورکر بدون HTTPS کار نمی‌کند

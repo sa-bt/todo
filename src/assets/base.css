@@ -23,6 +23,20 @@
   --color-text: #17271d;
   --color-text-secondary: #4f6b5b;
 
+  /*
+   * State colors. Previously each page hard-coded Tailwind shades such as
+   * green-500 / orange-500 / red-500, which ignore the active theme. These
+   * tokens give success, warning and danger one definition per theme so the
+   * same status reads the same everywhere.
+   */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+
+  /* Hover step for soft surfaces. Referenced by BaseButton and several
+   * panels, but it had no definition, so those hovers did nothing. */
+  --color-background-soft-hover: #e0ebe3;
+
   /* ... بقیه متغیرها ... */
 }
 
@@ -49,6 +63,12 @@ html.theme-minimal-sand{
   --color-heading:#292115;
   --color-text:#292115;
   --color-text-secondary:#6d5d43;
+
+  --color-success:#047857;
+  --color-warning:#b45309;
+  --color-danger:#b91c1c;
+
+  --color-background-soft-hover:#ece2cf;
 }
 html.theme-dark {
   /* primitives (می‌توانند ثابت بمانند یا برای کنتراست بهتر تغییر کنند) */
@@ -71,4 +91,11 @@ html.theme-dark {
   --color-heading: #f1f5f9;                /* متن سفید/روشن */
   --color-text: #f1f5f9;                   /* متن اصلی */
   --color-text-secondary: #94a3b8;         /* متن ثانویه (Slate-400) */
+
+  /* Lighter state colors so they stay legible on the dark background. */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --color-background-soft-hover: #29374b;
 }

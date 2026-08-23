@@ -75,7 +75,7 @@
                 <div class="metric-card row accent-accent">
                   <ListTree class="w-5 h-5 text-[var(--color-accent)]"/>
                   <div class="ml-3">
-                    <div class="metric-label">کل تسک‌ها</div>
+                    <div class="metric-label">همه کارها</div>
                     <div class="metric-value text-2xl">{{ goal.stats?.total ?? 0 }}</div>
                   </div>
                 </div>

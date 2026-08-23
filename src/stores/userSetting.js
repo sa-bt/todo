@@ -53,6 +53,15 @@ export const useUserSettingStore = defineStore('userSetting', {
         /**
          * ذخیره تنظیمات در سرور
          */
+        /**
+         * برمی‌گرداند که ذخیره واقعاً موفق بوده یا نه.
+         *
+         * بدون این مقدار، فراخوان نمی‌تواند شکست را تشخیص دهد و کارهای بعد از
+         * ذخیره (مثل ثبت اشتراک Web Push) را روی تنظیماتی انجام می‌دهد که هرگز
+         * روی سرور ننشسته‌اند.
+         *
+         * @returns {Promise<boolean>}
+         */
         async save() {
             const notify = useNotificationStore()
 
@@ -71,13 +80,17 @@ export const useUserSettingStore = defineStore('userSetting', {
 
                 // ✅ نمایش پیام موفقیت واضح و هماهنگ با تم Toast
                 notify.setNotification({
-                    message: 'تنظیمات با موفقیت ذخیره شد',
+                    message: 'تنظیمات ذخیره شد.',
                     type: 'success',
                     icon: 'sparkles',
                     duration: 4000,
                 })
+
+                return true
             } catch (error) {
                 notify.handleApiError(error)
+
+                return false
             }
         },
     },

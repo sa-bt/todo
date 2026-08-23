@@ -166,25 +166,44 @@
                 class="w-full max-w-sm bg-[var(--color-background)] shadow-2xl rounded-2xl p-6 border border-[var(--color-border)] transform transition-transform duration-300 scale-100"
                 role="dialog" aria-modal="true" aria-labelledby="otp-title" dir="rtl"
             >
-                <!-- ایمیل تأیید شد؛ از اینجا به بعد توپ در زمین مدیر است -->
+                <!-- Email is confirmed; from here the decision is the admin's -->
                 <div v-if="awaitingApproval" class="text-center">
-                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
-                        <Clock class="h-7 w-7 text-amber-500" aria-hidden="true" />
+                    <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+                        <Check class="h-8 w-8 text-emerald-500" aria-hidden="true" />
                     </div>
+
                     <h2 id="otp-title" class="text-2xl font-extrabold text-[var(--color-heading)]">
-                        در انتظار تأیید مدیر
+                        ایمیل شما تأیید شد
                     </h2>
-                    <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-                        ایمیل <span class="font-bold" dir="ltr">{{ otpEmail }}</span> تأیید شد.
-                        حساب شما پس از بررسی و تأیید مدیر فعال می‌شود و نتیجه را با ایمیل به شما خبر می‌دهیم.
+                    <p class="mt-2 text-sm text-[var(--color-text-secondary)]" dir="ltr">
+                        {{ otpEmail }}
                     </p>
-                    <button
-                        type="button"
-                        class="mt-6 w-full rounded-2xl bg-[var(--color-primary)] py-3 px-4 font-semibold text-white shadow-sm transition active:scale-[0.99]"
-                        @click="goToLogin"
-                    >
+
+                    <!-- Two-step progress: what is done, and what is left -->
+                    <ol class="mt-6 space-y-3 text-right">
+                        <li class="flex items-start gap-3">
+                            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                                <Check class="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                            </span>
+                            <span class="text-sm text-[var(--color-text-secondary)]">
+                                <strong class="block text-[var(--color-heading)]">ایمیل تأیید شد</strong>
+                                این مرحله کامل شده است.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
+                                <Clock class="h-4 w-4 text-amber-600" aria-hidden="true" />
+                            </span>
+                            <span class="text-sm text-[var(--color-text-secondary)]">
+                                <strong class="block text-[var(--color-heading)]">در انتظار تأیید مدیر</strong>
+                                مدیر خبردار شد. نتیجه را با ایمیل به شما اطلاع می‌دهیم و پس از آن می‌توانید وارد شوید.
+                            </span>
+                        </li>
+                    </ol>
+
+                    <BaseButton class="mt-6" block @click="goToLogin">
                         رفتن به صفحهٔ ورود
-                    </button>
+                    </BaseButton>
                 </div>
 
                 <form v-else @submit.prevent="verifyOtp">
@@ -253,6 +272,7 @@ import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 
 import { LoaderCircle, RefreshCw, X, Check, Clock } from 'lucide-vue-next'
+import BaseButton from '@/components/UI/BaseButton.vue'
 
 const router = useRouter()
 
@@ -282,7 +302,7 @@ const otpLoading = ref(false)
 const otpFieldError = ref('')
 const otpSuccessMessage = ref('')
 const resendTimer = ref(0)
-// ایمیل تأیید شده و حساب در صف اجازهٔ مدیر نشسته است.
+// Email confirmed; the account now sits in the administrator approval queue.
 const awaitingApproval = ref(false)
 
 
@@ -583,8 +603,9 @@ async function verifyOtp() {
     }
 
     /*
-     * تأیید ایمیل دیگر توکن نمی‌دهد. حساب تا وقتی مدیر اجازه ندهد بسته است،
-     * پس اینجا نه setAuth معنا دارد و نه ثبت وب‌پوش که به توکن نیاز دارد.
+     * Confirming the email no longer returns a token. The account stays closed
+     * until an administrator approves it, so neither storing auth state nor
+     * registering web push (which needs a token) applies here.
      */
     otpSuccessMessage.value = data.message
     awaitingApproval.value = true

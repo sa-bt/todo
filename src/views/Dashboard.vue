@@ -16,7 +16,12 @@ const shouldShowHeader = computed(() => {
 
   <div class="dashboard-container flex-1 w-full" dir="rtl">
 
-    <main class="p-0 sm:p-6 surface-soft">
+    <!--
+      Padding belongs to the pages themselves (the shared `.page` class), so the
+      layout only owns the background and the minimum height. Previously both
+      sides added padding and each tab ended up with a different inset.
+    -->
+    <main class="surface min-h-screen">
       <RouterView />
     </main>
 

@@ -160,7 +160,15 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
       })
     },
 
-    async markRead(id) {
+    /**
+     * `silent` برای وقتی است که خوانده‌شدن، نتیجه جانبی کار دیگری است.
+     *
+     * باز کردن یک اعلان خودش یعنی خواندنش؛ پیام «خوانده شد» در آن لحظه چیزی به
+     * کاربر نمی‌گوید و درست هنگام رفتن به صفحه مقصد روی صفحه می‌نشیند. تغییر
+     * وضعیت در خود فهرست دیده می‌شود. ولی وقتی کاربر صریحاً دکمه علامت‌گذاری را
+     * می‌زند، بازخورد لازم است.
+     */
+    async markRead(id, { silent = false } = {}) {
       try {
         const oldItem = this.items.find((n) => n.id === id)
 
@@ -179,10 +187,12 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
           this.unreadCount--
         }
 
+        if (silent) return
+
         this._toast().setNotification({
           type: 'success',
           icon: 'check-circle',
-          message: 'اعلان به عنوان خوانده شده علامت خورد ✅',
+          message: 'اعلان خوانده‌شده علامت خورد.',
           duration: 3000,
         })
       } catch (err) {
@@ -207,7 +217,7 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
         this._toast().setNotification({
           type: 'info',
           icon: 'check-check',
-          message: 'همهٔ اعلان‌ها خوانده شدند 📬',
+          message: 'همه اعلان‌ها خوانده‌شده علامت خوردند.',
           sound: false,
           duration: 3500,
         })
@@ -232,7 +242,7 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
         this._toast().setNotification({
           type: 'warning',
           icon: 'trash-2',
-          message: 'اعلان حذف شد 🗑️',
+          message: 'اعلان حذف شد.',
           sound: false,
           duration: 3000,
         })
@@ -253,7 +263,7 @@ export const useSystemNotificationsStore = defineStore('systemNotifications', {
         this._toast().setNotification({
           type: 'warning',
           icon: 'trash',
-          message: 'تمام اعلان‌ها حذف شدند 🗑️',
+          message: 'همه اعلان‌ها حذف شدند.',
           sound: false,
           duration: 4000,
         })

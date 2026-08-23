@@ -52,14 +52,39 @@
 
 .border-token{ border-color: var(--color-border); }
 .card-bg{ background: var(--color-background-soft); } /* یا سفید: #fff */
+/* ——— Page shell ———
+ * Every signed-in page shares one content width, one horizontal padding and
+ * one vertical rhythm between its sections. Pages used to set their own
+ * mixture of max-w-6xl / p-4 / m-3, which made the header and the first card
+ * land on a different line on each tab.
+ */
+.page {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .page { padding: 1.5rem; }
+}
+
 /* ——— Surfaces & Cards ——— */
 .surface          { background: var(--color-background); }
 .surface-soft     { background: var(--color-background-soft); }
 .surface-mute     { background: var(--color-background-mute); }
 
+.hover-surface-soft:hover { background: var(--color-background-soft); }
+.hover-surface-mute:hover { background: var(--color-background-mute); }
+
 /* ——— Borders ——— */
 .border-token-2   { border: 2px solid var(--color-border); }
 .border-hover:hover { border-color: var(--color-border-hover); }
+/* `divide-y` only sets the width; the color needs its own rule. */
+.divide-token > * + * { border-color: var(--color-border); }
 
 /* ——— Rings / Focus ——— */
 .ring-accent:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }

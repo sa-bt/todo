@@ -11,6 +11,9 @@ import {
 } from 'lucide-vue-next'
 import BaseSelect from './UI/BaseSelect.vue'
 import PaletteEditor from './Activity/PaletteEditor.vue'
+import PageHeader from './UI/PageHeader.vue'
+import StatCard from './UI/StatCard.vue'
+import EmptyState from './UI/EmptyState.vue'
 import { toPersianNumber } from '@/utils/number'
 import { weightedPercent } from '@/utils/taskWeight'
 import { useActivityPaletteStore } from '@/stores/activityPalette'
@@ -27,6 +30,7 @@ import {
 import {
   buildInsights,
   computeStreak,
+  pluralizeWeekday,
   previousPeriodStats,
   summarizeDays,
   weekdayBuckets,
@@ -381,6 +385,17 @@ async function fetchGoalRanking(range) {
   } finally {
     rankingLoading.value = false
   }
+}
+
+// Retry for the goal-ranking error state: rebuilds the request from the range
+// currently on screen, so the button works without touching the filters.
+function retryGoalRanking() {
+  const range = rangeGregorian.value
+
+  if (!range) return
+
+  fetchedRankingKey = `${range.from}:${range.to}`
+  fetchGoalRanking(range)
 }
 
 function toggleRankingOrder() {
@@ -783,7 +798,7 @@ async function handleViewTasks(payload) {
     show: true,
     loading: true,
     error: null,
-    title: payload.title || 'جزئیات تسک‌ها',
+    title: payload.title || 'کارهای این بازه',
     subtitle: payload.dateEnd ? `${payload.dateStart} تا ${payload.dateEnd}` : payload.dateStart,
     tasks: [],
   }
@@ -799,7 +814,7 @@ async function handleViewTasks(payload) {
       : items
   } catch (e) {
     console.error(e)
-    details.value.error = 'دریافت جزئیات تسک‌ها ناموفق بود.'
+    details.value.error = 'دریافت کارها ناموفق بود.'
   } finally {
     details.value.loading = false
   }
@@ -1028,16 +1043,31 @@ function getSparklinePath(points) {
 
 // ✅ تعریف کارت‌ها با آیکون‌ها (بدون رنگ ثابت - رنگ از تم گرفته میشود)
 const statCards = computed(() => [
-  { label: 'کل تسک', value: rangeStats.value.total, icon: ListChecks },
-  { label: 'روز طلایی', value: rangeStats.value.perfect, icon: Star },
-  { label: 'بازدهی', value: rangeStats.value.avg + '%', icon: TrendingUp },
-  { label: 'استراحت', value: rangeStats.value.inactive, icon: Moon }
+  { label: 'همه کارها', value: toPersianNumber(rangeStats.value.total), icon: ListChecks, color: 'blue' },
+  { label: 'روز طلایی', value: toPersianNumber(rangeStats.value.perfect), icon: Star, color: 'green' },
+  { label: 'بازدهی', value: toPersianNumber(rangeStats.value.avg) + '٪', icon: TrendingUp, color: 'indigo' },
+  { label: 'روز بی‌کار', value: toPersianNumber(rangeStats.value.inactive), icon: Moon, color: 'gray' },
 ])
 </script>
 
 <template>
   <!-- رنگ‌های پالت به شکل متغیر CSS، تا استایل‌های همین فایل هم به آن‌ها برسند -->
   <div class="stats-page" :style="palette.cssVars">
+
+    <PageHeader title="گزارش‌ها" subtitle="نمای فعالیت تو در بازه انتخاب‌شده.">
+      <template #actions>
+        <!-- کارت سال، صفحه جداگانه‌ای است و سال انتخاب‌شده را با خودش می‌برد. -->
+        <RouterLink
+          v-if="selectedYear <= todayObj.jy"
+          :to="{ name: 'yearReview', query: selectedYear === todayObj.jy ? {} : { year: String(selectedYear) } }"
+          class="review-link"
+        >
+          <Sparkles class="w-4 h-4"/>
+          کارت سال من
+        </RouterLink>
+        <BaseSelect v-model="selectedYear" name="year-select" :options="years.map(y => ({ value: y, label: toPersianNumber(y) }))" class="year-sel" />
+      </template>
+    </PageHeader>
 
     <div class="header-row">
       <div class="tab-box">
@@ -1050,18 +1080,6 @@ const statCards = computed(() => [
           <Activity v-if="t==='pattern'" class="s-icon"/>
           <span>{{ TAB_LABELS[t] }}</span>
         </button>
-      </div>
-      <div class="head-actions">
-        <!-- کارت سال، صفحه جداگانه‌ای است و سال انتخاب‌شده را با خودش می‌برد. -->
-        <RouterLink
-          v-if="selectedYear <= todayObj.jy"
-          :to="{ name: 'yearReview', query: selectedYear === todayObj.jy ? {} : { year: String(selectedYear) } }"
-          class="review-link"
-        >
-          <Sparkles class="w-4 h-4"/>
-          کارت سال من
-        </RouterLink>
-        <BaseSelect v-model="selectedYear" name="year-select" :options="years.map(y => ({ value: y, label: String(y) }))" class="year-sel" />
       </div>
     </div>
 
@@ -1137,22 +1155,14 @@ const statCards = computed(() => [
     </div>
 
     <div v-else class="stats-cards-grid">
-      <div v-for="(card, i) in statCards" :key="i" class="stat-card group">
-        <div class="flex items-center justify-between w-full gap-3">
-          <!-- بخش آیکون (چپ چین) - رنگ از متغیرهای تم -->
-          <div class="icon-box">
-            <component :is="card.icon" class="w-5 h-5" />
-          </div>
-          <!-- بخش متن (راست چین) -->
-          <div class="flex flex-col items-end flex-1 min-w-0">
-            <div class="stat-v">{{ card.value }}</div>
-            <div class="stat-l">{{ card.label }}</div>
-          </div>
-
-
-
-        </div>
-      </div>
+      <StatCard
+        v-for="(card, i) in statCards"
+        :key="i"
+        :title="card.label"
+        :value="card.value"
+        :icon="card.icon"
+        :color="card.color"
+      />
     </div>
 
     <!-- بینش خودکار: از همان داده صفحه، تابع بازه و فیلتر هدف -->
@@ -1245,10 +1255,18 @@ const statCards = computed(() => [
           <Loader2 class="w-8 h-8 animate-spin text-primary"/>
         </div>
 
-        <div v-else-if="rankingError" class="empty-range">{{ rankingError }}</div>
+        <EmptyState
+          v-else-if="rankingError"
+          variant="error"
+          compact
+          :title="rankingError"
+          description="اتصال اینترنت را بررسی کن و دوباره تلاش کن."
+          action-label="تلاش دوباره"
+          @action="retryGoalRanking"
+        />
 
         <div v-else-if="!sortedRanking.length" class="empty-range">
-          در این بازه هیچ هدفی تسک ثبت‌شده‌ای ندارد.
+          در این بازه هیچ هدفی کار ثبت‌شده‌ای ندارد.
         </div>
 
         <template v-else>
@@ -1301,7 +1319,7 @@ const statCards = computed(() => [
 
       <div v-else-if="activeTab === 'pattern'" class="fade-in">
         <div v-if="!hasPastActivity" class="empty-range">
-          در این بازه هنوز تسکی ثبت نشده است.
+          در این بازه هنوز کاری ثبت نشده است.
         </div>
 
         <template v-else>
@@ -1345,13 +1363,13 @@ const statCards = computed(() => [
                 </small>
                 <small v-else class="streak-dates">
                   {{ toPersianNumber(streakStats.lastBreak.done) }} از
-                  {{ toPersianNumber(streakStats.lastBreak.total) }} تسک
+                  {{ toPersianNumber(streakStats.lastBreak.total) }} کار
                 </small>
               </span>
             </div>
           </div>
 
-          <p class="pattern-note">روز بدون تسک زنجیره را نمی‌شکند، ولی به آن هم اضافه نمی‌کند.</p>
+          <p class="pattern-note">روز بدون کار زنجیره را نمی‌شکند، ولی به آن هم اضافه نمی‌کند.</p>
 
           <!-- الگوی روزهای هفته -->
           <div class="pattern-head">
@@ -1461,8 +1479,8 @@ const statCards = computed(() => [
           </div>
 
           <div class="tip-stats-grid">
-            <div class="stat-line"><span>کل تسک‌ها:</span> <b>{{tip.data.total}}</b></div>
-            <div class="stat-line"><span>انجام شده:</span> <b>{{tip.data.done}}</b></div>
+            <div class="stat-line"><span>همه کارها:</span> <b>{{ toPersianNumber(tip.data.total) }}</b></div>
+            <div class="stat-line"><span>انجام‌شده:</span> <b>{{ toPersianNumber(tip.data.done) }}</b></div>
           </div>
 
           <template v-if="tip.data.isFuture">
@@ -1480,13 +1498,13 @@ const statCards = computed(() => [
               @click="handleViewTasks(tip.data)"
               class="mt-4 w-full text-center text-xs font-bold text-primary py-2 border-t border-border hover:bg-primary/5 transition-colors rounded-b-xl"
           >
-            مشاهده جزئیات تسک‌ها
+            مشاهده کارها
           </button>
         </div>
       </div>
     </Teleport>
 
-    <!-- مودال جزئیات تسک‌ها -->
+    <!-- مودال جزئیات کارها -->
     <Teleport to="body">
       <div v-if="details.show" class="details-backdrop" :style="palette.cssVars" @click.self="closeDetails">
         <div role="dialog" aria-modal="true" class="details-card" @click.stop>
@@ -1505,21 +1523,21 @@ const statCards = computed(() => [
           <div v-else-if="details.error" class="details-empty">{{ details.error }}</div>
 
           <div v-else-if="!detailGroups.length" class="details-empty">
-            تسکی برای این بازه ثبت نشده است.
+            کاری برای این بازه ثبت نشده است.
           </div>
 
           <template v-else>
             <div class="details-summary">
-              <div class="summary-cell"><span>کل</span><b>{{ detailSummary.total }}</b></div>
-              <div class="summary-cell"><span>انجام‌شده</span><b>{{ detailSummary.done }}</b></div>
-              <div class="summary-cell"><span>بازدهی</span><b>{{ detailSummary.percent }}%</b></div>
+              <div class="summary-cell"><span>همه کارها</span><b>{{ toPersianNumber(detailSummary.total) }}</b></div>
+              <div class="summary-cell"><span>انجام‌شده</span><b>{{ toPersianNumber(detailSummary.done) }}</b></div>
+              <div class="summary-cell"><span>بازدهی</span><b>{{ toPersianNumber(detailSummary.percent) }}٪</b></div>
             </div>
 
             <div class="details-body custom-scroll">
               <div v-for="group in detailGroups" :key="group.day" class="details-group">
                 <div class="details-group-head">
                   <span class="details-day">{{ group.label }}</span>
-                  <span class="details-count">{{ group.done }} از {{ group.total }}</span>
+                  <span class="details-count">{{ toPersianNumber(group.done) }} از {{ toPersianNumber(group.total) }}</span>
                 </div>
                 <ul class="details-list">
                   <li v-for="task in group.tasks" :key="task.id" class="details-task">
@@ -1555,13 +1573,18 @@ const statCards = computed(() => [
   --activity-best-text: color-mix(in srgb, var(--activity-best) 74%, var(--color-text));
 }
 
-.stats-page { background-color: var(--color-background); min-height: 100vh; padding: 1.5rem; direction: rtl; color: var(--color-text); }
-.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+/*
+ * Same content width, padding and rhythm as the `.page` class the other
+ * signed-in pages use. The background and the full height belong to the
+ * dashboard layout, so they are not repeated here.
+ */
+.stats-page { max-width: 72rem; margin-inline: auto; padding: 1rem; direction: rtl; color: var(--color-text); }
+@media (min-width: 640px) { .stats-page { padding: 1.5rem; } }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 1rem; flex-wrap: wrap; gap: 1rem; }
 .tab-box { display: flex; flex-wrap: wrap; gap: 2px; background: var(--color-background-soft); padding: 4px; border-radius: 12px; border: 1px solid var(--color-border); }
 .t-btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: bold; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px; border: none; background: transparent; cursor: pointer; transition: 0.2s; }
 .t-btn.active { background: var(--color-background); color: var(--color-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .s-icon { width: 14px; height: 14px; }
-.head-actions { display: flex; align-items: center; gap: 0.75rem; }
 .review-link {
   display: inline-flex;
   align-items: center;
@@ -1585,7 +1608,7 @@ const statCards = computed(() => [
 .custom-range :deep(input) { direction: rtl; }
 .range-hint { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 1.25rem; }
 .range-hint-goal { color: var(--color-primary); }
-.range-hint.is-empty { color: #DC2626; }
+.range-hint.is-empty { color: var(--color-danger); }
 
 /* کارت جاماندگی */
 .backlog-card {
@@ -1660,40 +1683,16 @@ const statCards = computed(() => [
 .insights-empty { font-size: 12px; font-weight: 700; color: var(--color-text-secondary); }
 
 /* ✅ استایل کارت‌ها با پشتیبانی از تمام تم‌ها */
-.stats-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-.stat-card {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  padding: 1.25rem;
-  border-radius: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.04);
-}
-.stat-v { font-size: 1.5rem; font-weight: 900; color: var(--color-heading); line-height: 1.2; }
-.stat-l { font-size: 11px; color: var(--color-text-secondary); font-weight: 600; margin-top: 4px; }
-
-/* ✅ باکس آیکون: استفاده از color-mix برای سازگاری با تم */
-.icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  /* ترکیب 10% رنگ اصلی با 90% شفافیت/پس‌زمینه */
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-  color: var(--color-primary); /* رنگ خود آیکون */
-}
+/* The card itself is now the shared StatCard; only the skeleton stays local. */
+.stats-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.stat-card { border: 1px solid var(--color-border); border-radius: 16px; }
 
 /* Skeleton Loading */
-.pulse-bg { background: linear-gradient(90deg, var(--color-background-soft) 25%, var(--color-background-mute) 50%, var(--color-background-soft) 75%); background-size: 200% 100%; animation: pulse 1.5s infinite; height: 88px; }
+.pulse-bg { background: linear-gradient(90deg, var(--color-background-soft) 25%, var(--color-background-mute) 50%, var(--color-background-soft) 75%); background-size: 200% 100%; animation: pulse 1.5s infinite; height: 92px; }
 @keyframes pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-.main-panel { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: 24px; padding: 1.5rem; min-height: 300px; position: relative; }
+.main-panel { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: 16px; padding: 1rem; min-height: 300px; position: relative; }
+@media (min-width: 640px) { .main-panel { padding: 1.5rem; } }
 .loading-center { display: flex; justify-content: center; align-items: center; min-height: 200px; }
 .empty-range { text-align: center; padding: 3rem 1rem; font-size: 13px; font-weight: 700; color: var(--color-text-secondary); }
 

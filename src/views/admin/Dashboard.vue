@@ -55,6 +55,13 @@
         >
           <component :is="item.icon" class="h-5 w-5 shrink-0" aria-hidden="true" />
           <span class="flex-1">{{ item.label }}</span>
+          <span
+            v-if="item.routeName === 'adminUsers' && pendingUsers.count > 0"
+            class="min-w-6 rounded-full bg-amber-400 px-2 py-0.5 text-center text-[0.7rem] font-extrabold text-slate-950 tabular-nums"
+            :aria-label="`${pendingUsers.count} حساب در انتظار تأیید`"
+          >
+            {{ faNumber(pendingUsers.count) }}
+          </span>
           <ChevronLeft
             class="h-4 w-4 opacity-60"
             :class="isNavigationActive(item) ? 'translate-x-0' : '-translate-x-1'"
@@ -189,7 +196,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import {
   BarChart3,
@@ -211,12 +218,15 @@ import {
 import InstallAppButton from '@/components/UI/InstallAppButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { useAdminPendingUsersStore } from '@/stores/adminPendingUsers'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const themeStore = useThemeStore()
+const pendingUsers = useAdminPendingUsersStore()
 const mobileMenuOpen = ref(false)
+const faNumber = (value) => Number(value || 0).toLocaleString('fa-IR')
 
 const navigation = [
   {
@@ -329,6 +339,12 @@ async function logout() {
   await auth.signOut()
   router.push({ name: 'adminLogin' })
 }
+
+// The approval queue badge must be right the moment the panel opens, not only
+// after the administrator happens to visit the users screen.
+onMounted(() => {
+  pendingUsers.refresh()
+})
 
 watch(
   () => route.fullPath,

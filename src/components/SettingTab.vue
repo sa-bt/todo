@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { registerWebPush, requestNotificationPermission } from '@/utils/webpush'
 
 // ✅ استورها
@@ -13,7 +13,9 @@ import BaseCheckbox from '@/components/UI/BaseCheckbox.vue'
 import BaseTimeSelect from '@/components/UI/BaseTimeSelect.vue'
 import BaseSelect from '@/components/UI/BaseSelect.vue'
 
-import { Volume2 } from 'lucide-vue-next'
+import { Volume2, Lock, TriangleAlert, X } from 'lucide-vue-next'
+import PageHeader from '@/components/UI/PageHeader.vue'
+import BaseButton from '@/components/UI/BaseButton.vue'
 
 const notificationStore = useNotificationStore()
 const userSetting = useUserSettingStore()
@@ -67,16 +69,17 @@ onMounted(() => {
 
 // برچسب فارسی مجوزها
 const permissionLabels = {
-  granted: 'فعال (مجوز داده شده)',
-  denied: 'غیرفعال (مسدود شده)',
-  default: 'نامشخص (نیاز به اجازه)',
+  granted: 'فعال',
+  denied: 'مسدود شده',
+  default: 'در انتظار اجازه',
 }
 
-const statusColor = computed(() => ({
-  'text-[var(--color-text-secondary)]': notificationPermission.value === 'default',
-  'text-green-500 font-bold': notificationPermission.value === 'granted',
-  'text-red-500 font-bold': notificationPermission.value === 'denied',
-}))
+// Status colour comes from the theme tokens so it stays legible in every theme.
+const statusStyle = computed(() => {
+  if (notificationPermission.value === 'granted') return { color: 'var(--color-success)', fontWeight: 700 }
+  if (notificationPermission.value === 'denied') return { color: 'var(--color-danger)', fontWeight: 700 }
+  return { color: 'var(--color-text-secondary)' }
+})
 
 // ---------------------------------------------
 // 🔹 توابع تعامل با استور
@@ -113,43 +116,86 @@ async function saveSetting() {
     userSetting.weekly_report_time = weeklyReportTime.value
     userSetting.drop_alert = dropAlert.value
 
-    await userSetting.save()
+    // ذخیره ناموفق نباید ادامه پیدا کند: ثبت اشتراک مرورگر برای تنظیماتی که
+    // روی سرور ننشسته، وضعیت دستگاه را با وضعیت حساب ناهماهنگ می‌کند.
+    // پیام خطا را خود استور نشان می‌دهد و مقدارهای واردشده کاربر دست‌نخورده
+    // در فرم می‌مانند تا بتواند دوباره تلاش کند.
+    const saved = await userSetting.save()
+
+    if (!saved) return
 
     // ✅ ثبت webpush فقط اگر لازم بود
-    const needsWebPush =
-        (dailyReport.value || weeklyReport.value || dropAlert.value || taskReminder.value || perTaskProgress.value) &&
-        notificationPermission.value === 'granted'
-
-    if (needsWebPush) await registerWebPush()
+    if (needsPush.value && notificationPermission.value === 'granted') {
+      await registerWebPush()
+    }
   } finally {
     isSaving.value = false
   }
 }
 
-// درخواست مجوز مرورگر
+/*
+ * درخواست مجوز مرورگر فقط با کلیک صریح روی همین دکمه انجام می‌شود.
+ *
+ * قبلاً یک watch روی همه سوئیچ‌ها بود که به‌محض روشن‌شدن هر گزینه، پنجره مجوز
+ * مرورگر را ناگهانی باز می‌کرد. کاربر بدون اینکه بداند چرا لازم است با پرسش
+ * مرورگر روبه‌رو می‌شد و رد کردنش مجوز را برای همیشه مسدود می‌کند. حالا به‌جای
+ * آن، توضیح درون صفحه نشان داده می‌شود و تصمیم با خود کاربر است.
+ */
 async function requestPermission() {
   const permission = await requestNotificationPermission()
   notificationPermission.value = permission
+
   if (permission === 'granted') {
     showHelp.value = false
-    notificationStore.setNotification('نوتیفیکیشن فعال شد', 'success')
+
+    notificationStore.setNotification({
+      message: 'اعلان‌های مرورگر فعال شد.',
+      type: 'success',
+      icon: 'bell',
+      duration: 4000,
+    })
+
     await registerWebPush()
-  } else {
-    notificationStore.setNotification('مجوز نوتیفیکیشن داده نشد', 'error')
-    showHelp.value = true
+
+    return
   }
+
+  notificationStore.setNotification({
+    message: 'اجازه نمایش اعلان داده نشد.',
+    type: 'error',
+    icon: 'alert-triangle',
+    duration: 4000,
+  })
 }
 
-// Watch برای فعال‌سازی مجوزها در صورت نیاز
-watch([dailyReport, weeklyReport, dropAlert, taskReminder, perTaskProgress], async ([daily, weekly, drop, task, per]) => {
-  if (daily || weekly || drop || task || per) {
-    if (notificationPermission.value === 'default') {
-      const perm = await requestNotificationPermission()
-      notificationPermission.value = perm
-      if (perm !== 'granted') showHelp.value = true
-    } else if (notificationPermission.value === 'denied') {
-      showHelp.value = true
+// گزینه‌هایی که بدون مجوز مرورگر عملاً کار نمی‌کنند.
+const needsPush = computed(
+  () =>
+    dailyReport.value ||
+    weeklyReport.value ||
+    dropAlert.value ||
+    taskReminder.value ||
+    perTaskProgress.value,
+)
+
+// کاربر گزینه‌ای را روشن کرده که بدون مجوز بی‌اثر است. متن هشدار به وضعیت
+// واقعی مجوز بستگی دارد، چون «هنوز اجازه نداده» و «مسدود کرده» دو کار متفاوت
+// از کاربر می‌خواهند.
+const permissionWarning = computed(() => {
+  if (!needsPush.value || notificationPermission.value === 'granted') return null
+
+  if (notificationPermission.value === 'denied') {
+    return {
+      title: 'اعلان‌های مرورگر مسدود شده‌اند',
+      body: 'تنظیمات این بخش ذخیره می‌شوند، ولی تا وقتی مجوز مسدود است اعلانی روی این دستگاه نمایش داده نمی‌شود.',
+      blocked: true,
     }
+  }
+
+  return {
+    title: 'برای دریافت این اعلان‌ها به مجوز مرورگر نیاز است',
+    body: 'بدون این مجوز تنظیمات ذخیره می‌شوند، ولی اعلانی روی این دستگاه نمایش داده نمی‌شود.',
+    blocked: false,
   }
 })
 
@@ -158,15 +204,17 @@ onMounted(loadSetting)
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto mt-12 p-6 bg-[var(--color-background-soft)] rounded-3xl shadow-xl border border-token text-[var(--color-text)]">
-    <h2 class="text-2xl font-bold mb-10 text-[var(--color-heading)] text-center">تنظیمات نوتیفیکیشن</h2>
+  <div class="page">
+    <PageHeader title="تنظیمات" subtitle="اعلان‌ها، صدا و رنگ‌بندی گزارش‌ها." />
+
+    <h2 class="text-base font-bold text-[var(--color-heading)]">اعلان‌ها</h2>
 
     <!-- ۱. گزارش روزانه -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-primary)] shadow-sm space-y-4">
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm space-y-4">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
           <h3 class="font-semibold text-[var(--color-heading)]">گزارش روزانه (ساعت مشخص)</h3>
-          <p class="text-[var(--color-text-secondary)] text-sm">درصد تکمیل تسک‌ها و یک پیام انگیزشی در پایان روز ارسال شود.</p>
+          <p class="text-[var(--color-text-secondary)] text-sm">درصد انجام کارها و یک پیام انگیزشی در پایان روز فرستاده می‌شود.</p>
         </div>
 
         <!-- ✅ نمایش وضعیت (کپسول) + سوئیچ -->
@@ -187,14 +235,14 @@ onMounted(loadSetting)
             name="report_time_select"
             label="زمان ارسال گزارش"
             placeholder="مثال: 21:00"
-            class="pt-3 mt-3 border-t border-token/50"
+            class="pt-3 mt-3 border-t border-token"
             :disabled="!dailyReport"
         />
       </Transition>
     </div>
 
     <!-- ۲. گزارش هفتگی -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-secondary)] shadow-sm space-y-4">
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm space-y-4">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
           <h3 class="font-semibold text-[var(--color-heading)]">گزارش هفتگی</h3>
@@ -212,7 +260,7 @@ onMounted(loadSetting)
       </div>
 
       <Transition name="slide-fade-down">
-        <div v-if="weeklyReport" class="pt-3 mt-3 border-t border-token/50 space-y-4">
+        <div v-if="weeklyReport" class="pt-3 mt-3 border-t border-token space-y-4">
           <div class="flex flex-col gap-1">
             <span class="text-sm text-[var(--color-text-secondary)]">روز ارسال</span>
             <BaseSelect
@@ -233,7 +281,7 @@ onMounted(loadSetting)
     </div>
 
     <!-- ۳. هشدار افت -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-secondary)] shadow-sm space-y-4">
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm space-y-4">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
           <h3 class="font-semibold text-[var(--color-heading)]">هشدار افت</h3>
@@ -254,12 +302,12 @@ onMounted(loadSetting)
       </div>
     </div>
 
-    <!-- ۴. یادآوری تسک‌ها -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-[var(--color-accent)] shadow-sm space-y-4">
+    <!-- ۴. یادآوری کارها -->
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm space-y-4">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
-          <h3 class="font-semibold text-[var(--color-heading)]">یادآوری تسک‌ها (ساعت مشخص)</h3>
-          <p class="text-[var(--color-text-secondary)] text-sm">یادآوری برای تسک‌هایی که هنوز تا زمان مشخصی انجام نشده‌اند.</p>
+          <h3 class="font-semibold text-[var(--color-heading)]">یادآوری کارها (ساعت مشخص)</h3>
+          <p class="text-[var(--color-text-secondary)] text-sm">یادآوری برای کارهایی که تا ساعت مشخصی انجام نشده‌اند.</p>
         </div>
 
         <!-- ✅ نمایش وضعیت (کپسول) + سوئیچ -->
@@ -280,18 +328,18 @@ onMounted(loadSetting)
             name="reminder_time_select"
             label="زمان ارسال یادآوری"
             placeholder="مثال: 17:00"
-            class="pt-3 mt-3 border-t border-token/50"
+            class="pt-3 mt-3 border-t border-token"
             :disabled="!taskReminder"
         />
       </Transition>
     </div>
 
     <!-- ۵. اعلان پیشرفت لحظه‌ای -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-green-500 shadow-sm">
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm">
       <div class="flex items-start justify-between">
         <div class="flex flex-col flex-1 gap-1">
-          <h3 class="font-semibold text-[var(--color-heading)]">نوتیف پیشرفت لحظه‌ای</h3>
-          <p class="text-[var(--color-text-secondary)] text-sm">دریافت درصد پیشرفت امروز، بلافاصله پس از تکمیل هر تسک.</p>
+          <h3 class="font-semibold text-[var(--color-heading)]">اعلان پیشرفت لحظه‌ای</h3>
+          <p class="text-[var(--color-text-secondary)] text-sm">درصد پیشرفت امروز، بلافاصله پس از انجام هر کار.</p>
         </div>
 
         <!-- ✅ نمایش وضعیت (کپسول) + سوئیچ -->
@@ -307,7 +355,7 @@ onMounted(loadSetting)
     </div>
 
     <!-- ۶. صدای اعلان‌های داخل برنامه -->
-    <div class="mb-6 p-4 surface rounded-2xl border-l-4 border-purple-500 shadow-sm space-y-4">
+    <div class="p-4 surface rounded-2xl border border-token shadow-sm space-y-4">
       <div class="flex flex-col gap-1">
         <h3 class="font-semibold text-[var(--color-heading)]">صدای اعلان</h3>
         <p class="text-[var(--color-text-secondary)] text-sm">
@@ -328,7 +376,7 @@ onMounted(loadSetting)
             @click="toastSound.play()"
             :disabled="toastSound.isMuted"
             class="tap-target shrink-0 inline-flex items-center gap-2 px-4 min-h-[42px] rounded-xl border border-token
-             bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-background-soft)]
+             surface text-[var(--color-text)] hover-surface-soft
              transition disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="پخش نمونه صدا"
         >
@@ -339,44 +387,56 @@ onMounted(loadSetting)
     </div>
 
     <!-- وضعیت مجوز نوتیفیکیشن مرورگر -->
-    <div class="mb-6 p-4 text-center surface rounded-xl border border-token">
-      <p class="text-[var(--color-text)] font-medium">وضعیت فعلی نوتیفیکیشن:
-        <span :class="statusColor" class="mr-1">
+    <div class="p-4 text-center surface rounded-2xl border border-token">
+      <p class="text-[var(--color-text)] font-medium">وضعیت اعلان‌های مرورگر:
+        <span :style="statusStyle" class="mr-1">
           {{ permissionLabels[notificationPermission] }}
         </span>
       </p>
     </div>
 
+    <!--
+      هشدار مجوز: فقط وقتی می‌آید که کاربر گزینه‌ای را روشن کرده باشد که بدون
+      مجوز مرورگر بی‌اثر است. جای پنجره ناگهانی مرورگر را گرفته است.
+    -->
+    <div
+      v-if="permissionWarning"
+      class="flex items-start gap-3 p-4 rounded-2xl border permission-warning"
+      :class="permissionWarning.blocked ? 'is-blocked' : 'is-pending'"
+      role="status"
+    >
+      <span class="shrink-0 mt-0.5">
+        <Lock v-if="permissionWarning.blocked" class="w-5 h-5" aria-hidden="true" />
+        <TriangleAlert v-else class="w-5 h-5" aria-hidden="true" />
+      </span>
+
+      <div class="flex-1 min-w-0 space-y-1">
+        <p class="font-semibold text-[var(--color-heading)]">{{ permissionWarning.title }}</p>
+        <p class="text-sm text-[var(--color-text-secondary)] leading-6">{{ permissionWarning.body }}</p>
+      </div>
+    </div>
+
     <!-- دکمه‌های فعال‌سازی/راهنما -->
-    <div v-if="notificationPermission !== 'granted'" class="text-center mb-6 flex justify-center gap-4">
-      <button v-if="notificationPermission === 'default'" @click="requestPermission" class="tap-target px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-xl hover:bg-[var(--color-primary-hover)] transition">
-        فعال‌سازی نوتیفیکیشن
-      </button>
-      <button @click="showHelp = true" class="tap-target px-6 py-3 bg-[var(--color-background)] text-[var(--color-text)] font-semibold rounded-xl hover:bg-[var(--color-background-soft-hover)] transition border border-token">
-        راهنمای فعال‌سازی
-      </button>
+    <div v-if="notificationPermission !== 'granted'" class="flex flex-wrap justify-center gap-3">
+      <BaseButton v-if="notificationPermission === 'default'" @click="requestPermission">
+        فعال‌سازی اعلان‌ها
+      </BaseButton>
+      <BaseButton variant="ghost" @click="showHelp = true">راهنمای فعال‌سازی</BaseButton>
     </div>
 
     <!-- دکمه ذخیره -->
-    <button
-        @click="saveSetting"
-        :disabled="isSaving"
-        class="w-full py-3 bg-[var(--color-primary)] text-white font-semibold rounded-2xl shadow-md hover:bg-[var(--color-primary-hover)] transition-all tap-target inline-flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed">
-      <span v-if="isSaving"
-            class="animate-spin border-2 border-white border-t-transparent w-5 h-5 rounded-full"
-            aria-hidden="true">
-      </span>
-      {{ isSaving ? 'در حال ذخیره...' : 'ذخیره تنظیمات' }}
-    </button>
+    <BaseButton size="lg" block :loading="isSaving" @click="saveSetting">
+      {{ isSaving ? 'در حال ذخیره…' : 'ذخیره تنظیمات' }}
+    </BaseButton>
 
     <!--
       رنگ‌بندی نتایج.
       جدا از دکمه ذخیره بالا است و دکمه ذخیره خودش را دارد، چون دو تنظیم بی‌ربط
       زیر یک دکمه کاربر را گمراه می‌کند.
     -->
-    <div class="mt-10 pt-8 border-t border-token">
-      <h2 class="text-2xl font-bold mb-2 text-[var(--color-heading)] text-center">رنگ‌بندی نتایج</h2>
-      <p class="text-[var(--color-text-secondary)] text-sm text-center mb-6">
+    <div class="pt-6 border-t border-token">
+      <h2 class="text-base font-bold mb-2 text-[var(--color-heading)]">رنگ‌بندی نتایج</h2>
+      <p class="text-[var(--color-text-secondary)] text-sm mb-6">
         رنگ هر درصد بازدهی در گزارش‌ها. همین رنگ‌بندی در نقشه سالانه، هفته‌ها، ماه‌ها و کارت اهداف
         به کار می‌رود و روی همین مرورگر ذخیره می‌شود.
       </p>
@@ -386,30 +446,40 @@ onMounted(loadSetting)
 
     <!-- مودال راهنما -->
     <div v-if="showHelp" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
-      <div class="bg-[var(--color-background)] rounded-2xl shadow-2xl p-8 max-w-md w-full border border-token text-[var(--color-text)]">
-        <h2 class="text-xl font-bold mb-4 text-[var(--color-heading)]">راهنمای فعال‌سازی نوتیفیکیشن</h2>
+      <div class="bg-[var(--color-background)] rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-token text-[var(--color-text)]">
+        <h2 class="text-lg font-bold mb-4 text-[var(--color-heading)]">راهنمای فعال‌سازی اعلان‌ها</h2>
 
-        <template v-if="notificationPermission === 'denied'">
-          <p class="text-red-500 mb-4 font-semibold">🚨 مجوز دسترسی به نوتیفیکیشن توسط شما مسدود شده است.</p>
-        </template>
+        <p
+          v-if="notificationPermission === 'denied'"
+          class="mb-4 flex items-center gap-2 font-semibold"
+          :style="{ color: 'var(--color-danger)' }"
+        >
+          <TriangleAlert class="w-4 h-4 shrink-0" aria-hidden="true" />
+          اجازه نمایش اعلان در مرورگر مسدود شده است.
+        </p>
 
-        <p class="mb-4 text-sm">برای فعال کردن اعلان‌ها، لطفاً مجوز را در تنظیمات مرورگر/سیستم عامل خود تغییر دهید:</p>
+        <p class="mb-4 text-sm">برای فعال کردن اعلان‌ها، اجازه را در تنظیمات مرورگر تغییر بده:</p>
 
         <ol class="list-decimal list-inside space-y-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-          <li>روی **آیکون قفل** (🔒) در نوار آدرس کلیک کنید.</li>
-          <li>به بخش <b>تنظیمات سایت (Site settings)</b> بروید.</li>
-          <li>گزینه <b>نوتیفیکیشن‌ها (Notifications)</b> را پیدا کنید و روی **اجازه (Allow)** تنظیم کنید.</li>
-          <li>صفحه را **رفرش (Reload)** کنید.</li>
+          <li>
+            روی
+            <Lock class="inline-block w-3.5 h-3.5 -mt-0.5" aria-hidden="true" />
+            آیکون قفل در نوار نشانی کلیک کن.
+          </li>
+          <li>به بخش تنظیمات سایت برو.</li>
+          <li>گزینه اعلان‌ها را پیدا کن و روی «اجازه» بگذار.</li>
+          <li>صفحه را دوباره بارگذاری کن.</li>
         </ol>
 
-        <p v-if="isPWA" class="mt-4 text-xs italic text-[var(--color-text-secondary)]">
-          اگر از PWA استفاده می‌کنید، ممکن است لازم باشد مجوز را در تنظیمات نوتیفیکیشن خود سیستم عامل (مانند گوشی) نیز بررسی کنید.
+        <p v-if="isPWA" class="mt-4 text-xs text-[var(--color-text-secondary)]">
+          اگر برنامه را روی دستگاه نصب کرده‌ای، اجازه اعلان را در تنظیمات خود دستگاه هم بررسی کن.
         </p>
 
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="showHelp = false" class="tap-target px-4 py-2 rounded-xl bg-[var(--color-background-soft)] hover:bg-[var(--color-background-soft-hover)] text-[var(--color-text)] border border-token">
+          <BaseButton variant="ghost" @click="showHelp = false">
+            <X class="w-4 h-4" aria-hidden="true" />
             بستن
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -417,6 +487,22 @@ onMounted(loadSetting)
 </template>
 
 <style scoped>
+/*
+ * هشدار مجوز. رنگ از توکن‌های تم می‌آید تا در پوسته روشن و تیره خوانا بماند، و
+ * تفاوت دو حالت فقط رنگ نیست: آیکون قفل در برابر آیکون هشدار، و متن متفاوت.
+ */
+.permission-warning.is-pending {
+  border-color: color-mix(in oklab, var(--color-warning) 35%, var(--color-border));
+  background: color-mix(in oklab, var(--color-warning) 8%, var(--color-background));
+  color: var(--color-warning);
+}
+
+.permission-warning.is-blocked {
+  border-color: color-mix(in oklab, var(--color-danger) 35%, var(--color-border));
+  background: color-mix(in oklab, var(--color-danger) 8%, var(--color-background));
+  color: var(--color-danger);
+}
+
 /* ترنزیشن برای باز و بسته شدن BaseTimeSelect زیر سوئیچ */
 .slide-fade-down-enter-active,
 .slide-fade-down-leave-active {

@@ -299,7 +299,7 @@ async function onSubmit () {
     auth.setAuth({ user: data.data.user, token: data.data.token })
 
     if (isAdminLogin.value && !auth.isAdmin) {
-      // توکن همین الان صادر شده و معتبر است، پس باید روی سرور هم باطل شود.
+      // The token was just issued and is valid, so revoke it server-side too.
       await auth.signOut()
       applyErrors({ messages: ['این مسیر فقط برای حساب مدیر قابل استفاده است.'] })
       await fetchCaptcha()
@@ -376,7 +376,7 @@ async function parseErrorResponse(res) {
     messages.unshift('کپچا منقضی شده، لطفاً دوباره تلاش کنید.')
   }
   if (status === 401 && !messages.length) messages.push('اطلاعات ورود نادرست است.')
-  // ۴۰۳ یعنی گذرواژه درست بود ولی حساب هنوز اجازهٔ ورود ندارد.
+  // 403 means the password was right but the account is not cleared to sign in.
   if (status === 403 && !messages.length) messages.push('این حساب هنوز اجازهٔ ورود ندارد.')
   if (status === 429 && !messages.length) messages.push('دفعات تلاش بیش از حد مجاز است. بعداً دوباره تلاش کنید.')
 
