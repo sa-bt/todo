@@ -22,15 +22,16 @@
     </p>
 
     <div class="mt-6 flex flex-wrap items-center justify-center gap-4">
-      <RouterLink
+      <component
+        :is="link.href ? 'a' : RouterLink"
         v-for="link in appLinks"
         :key="link.label"
-        :to="link.to"
+        v-bind="link.href ? { href: link.href } : { to: link.to }"
         :aria-label="link.label"
         class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-token transition hover:border-[var(--color-primary)] hover:scale-110"
       >
         <img :src="link.icon" :alt="link.label" class="h-full w-full object-contain p-0.5" />
-      </RouterLink>
+      </component>
     </div>
   </footer>
 </template>
@@ -38,6 +39,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { adminAppUrl } from '@/utils/appHost'
 
 const { t } = useI18n()
 
@@ -105,8 +107,17 @@ const appLinks = [
     icon: '/pwa-192x192.png',
   },
   {
+    /*
+     * پنل مدیریت سند ورودی مستقل خودش را دارد (`admin.html` با manifest مدیر).
+     * پیمایش درون‌برنامه‌ای با RouterLink همان سند اپ کاربر را نگه می‌دارد، پس
+     * این پیوند باید بارگذاری کامل باشد تا مرورگر واقعاً سند پنل را بگیرد.
+     *
+     * مقصد `start_url` پنل است، یعنی همان نشانی‌ای که اپ نصب‌شده با آن بالا
+     * می‌آید. بقیه‌ی تصمیم (داشبورد یا فرم ورود) با نگهبان مسیر داخل خودِ سند
+     * پنل گرفته می‌شود.
+     */
     label: 'ورود مدیر',
-    to: { name: 'adminLogin' },
+    href: adminAppUrl(),
     icon: '/admin-pwa-192x192.png',
   },
 ]

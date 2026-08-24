@@ -5,6 +5,40 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/*
+ * سرور توسعه‌ی Vite هر مسیر ناشناخته را به `index.html` برمی‌گرداند، یعنی سند اپ
+ * کاربر. در نتیجه `/admin/login` و بقیه‌ی مسیرهای عمقی پنل، در توسعه با manifest
+ * و هویت اپ کاربر بالا می‌آمدند، در حالی که nginx در سرور همان‌ها را به
+ * `admin.html` می‌دهد (`location ^~ /admin/` در `deploy/nginx/todo-front.conf`).
+ * این افزونه همان قاعده را به توسعه می‌آورد تا رفتار دو محیط یکی باشد.
+ */
+function serveAdminDocument() {
+  const rewrite = (req, _res, next) => {
+    const pathname = (req.url || '').split('?')[0]
+
+    if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+      // فایل‌های واقعی (دارایی‌ها و آیکن‌ها) باید دست‌نخورده بمانند
+      if (!/\.[a-z0-9]+$/i.test(pathname)) {
+        req.url = '/admin.html'
+      }
+    }
+
+    next()
+  }
+
+  return {
+    name: 'serve-admin-document',
+    // بدنه‌ی بلوکی لازم است: هر مقدار برگشتی از این قلاب‌ها را Vite به‌عنوان
+    // قلاب پس از نصب میان‌افزارهای داخلی صدا می‌زند و خطا می‌دهد.
+    configureServer(server) {
+      server.middlewares.use(rewrite)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite)
+    },
+  }
+}
+
 export default defineConfig({
   define: {
     // 💡 این مقدار برای Cache Busting توی سرویس ورکر استفاده میشه
@@ -12,6 +46,7 @@ export default defineConfig({
   },
 
   plugins: [
+    serveAdminDocument(),
     vue(),
     vueDevTools(),
     tailwindcss(),

@@ -219,6 +219,14 @@ router.beforeEach((to, _from, next) => {
     console.warn(
       `Access Denied for user ${auth.user?.name} (Role: ${auth.user?.role}) attempting to access ${to.path}`,
     )
+
+    // اینجا سند پنل مدیریت بالا آمده است، نه اپ کاربر. فرستادن کاربر عادی به
+    // نمای روزانه یعنی اپ کاربر داخل پنجره‌ی پنل باز شود؛ همان چیزی که آیکن
+    // فوتر را بی‌اثر می‌کرد. جای درست، فرم ورود مدیر است.
+    if (to.path.startsWith('/admin')) {
+      return next({ name: 'adminLogin', query: { redirect: to.fullPath } })
+    }
+
     return next({ name: 'goals' })
   }
 
@@ -226,7 +234,14 @@ router.beforeEach((to, _from, next) => {
     if (auth.isAdmin) {
       return next({ name: 'admin' })
     }
-    return next({ name: 'day' })
+
+    // نشست کاربر عادی، «ورود انجام‌شده» برای پنل مدیریت نیست. اگر اینجا هم به اپ
+    // کاربر برگردانده شود، هر کسی که با حساب عادی وارد شده باشد با کلیک روی آیکن
+    // پنل در فوتر، دوباره اپ کاربر را می‌بیند و فرم ورود مدیر هرگز باز نمی‌شود.
+    // خود صفحه ورود، اگر حساب واردشده مدیر نباشد نشست تازه را باطل می‌کند.
+    if (!to.meta.adminApp) {
+      return next({ name: 'day' })
+    }
   }
 
   return next()
